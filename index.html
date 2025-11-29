@@ -187,14 +187,14 @@
                                                 <input
                                                     type="text"
                                                     placeholder="내용"
-                                                    className="flex-1 p-2 text-sm bg-white border border-transparent rounded-lg focus:border-blue-500 outline-none transition-colors shadow-sm"
+                                                    className="flex-1 min-w-0 p-2 text-sm bg-white border border-transparent rounded-lg focus:border-blue-500 outline-none transition-colors shadow-sm"
                                                     value={expenseInputs[budget.id]?.desc || ''}
                                                     onChange={(e) => handleExpenseInputChange(budget.id, 'desc', e.target.value)}
                                                 />
                                                 <input
                                                     type="number"
                                                     placeholder="금액"
-                                                    className="flex-1 p-2 text-sm bg-white border border-transparent rounded-lg focus:border-blue-500 outline-none transition-colors shadow-sm"
+                                                    className="flex-1 min-w-0 p-2 text-sm bg-white border border-transparent rounded-lg focus:border-blue-500 outline-none transition-colors shadow-sm"
                                                     value={expenseInputs[budget.id]?.amount || ''}
                                                     onChange={(e) => handleExpenseInputChange(budget.id, 'amount', e.target.value)}
                                                     onKeyDown={(e) => e.key === 'Enter' && addExpense(budget.id)}
