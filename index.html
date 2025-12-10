@@ -23,7 +23,7 @@
     <script type="text/babel">
         const { useState, useEffect } = React;
 
-        // 아이콘 컴포넌트들 (Lucide 대체)
+        // 아이콘 컴포넌트들
         const WalletIcon = () => (
             <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-blue-600 mr-2"><path d="M21 12V7H5a2 2 0 0 1 0-4h14v4"/><path d="M3 5v14a2 2 0 0 0 2 2h16v-5"/><path d="M18 12a2 2 0 0 0 0 4h4v-4Z"/></svg>
         );
@@ -36,6 +36,9 @@
         const XIcon = ({ className }) => (
             <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
         );
+        const PencilIcon = ({ className }) => (
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/><path d="m15 5 4 4"/></svg>
+        );
 
         function App() {
             // 예산 데이터 상태 관리
@@ -44,12 +47,16 @@
                 return saved ? JSON.parse(saved) : [];
             });
 
-            // 모달 상태
+            // 예산 추가 모달 상태
             const [isModalOpen, setIsModalOpen] = useState(false);
             const [newBudgetName, setNewBudgetName] = useState('');
             const [newBudgetAmount, setNewBudgetAmount] = useState('');
 
-            // 지출 입력 상태
+            // 지출 수정 모달 상태
+            const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+            const [editingLog, setEditingLog] = useState(null); // { budgetId, logId, desc, amount }
+
+            // 지출 입력 상태 (각 예산 카드별)
             const [expenseInputs, setExpenseInputs] = useState({});
 
             // 데이터 변경 시 로컬 스토리지 저장
@@ -62,7 +69,7 @@
                 return new Intl.NumberFormat('ko-KR', { style: 'currency', currency: 'KRW' }).format(amount);
             };
 
-            // 새 예산 추가
+            // 1. 예산 관련 기능 ==========================================
             const handleAddBudget = (e) => {
                 e.preventDefault();
                 if (!newBudgetName || !newBudgetAmount) return;
@@ -72,7 +79,7 @@
                     name: newBudgetName,
                     total: parseInt(newBudgetAmount),
                     spent: 0,
-                    logs: [] // 지출 기록
+                    logs: [] 
                 };
 
                 setBudgets([...budgets, newBudget]);
@@ -81,7 +88,12 @@
                 setIsModalOpen(false);
             };
 
-            // 금액 간편 추가 버튼 핸들러
+            const deleteBudget = (id) => {
+                if (window.confirm('이 예산 항목을 통째로 삭제할까요?')) {
+                    setBudgets(budgets.filter(b => b.id !== id));
+                }
+            };
+
             const addAmountToInput = (amount) => {
                 setNewBudgetAmount(prev => {
                     const current = parseInt(prev) || 0;
@@ -89,14 +101,7 @@
                 });
             };
 
-            // 예산 삭제
-            const deleteBudget = (id) => {
-                if (window.confirm('이 예산을 삭제할까요?')) {
-                    setBudgets(budgets.filter(b => b.id !== id));
-                }
-            };
-
-            // 지출 입력 값 변경
+            // 2. 지출 관련 기능 (추가/삭제/수정) ==========================
             const handleExpenseInputChange = (budgetId, field, value) => {
                 setExpenseInputs(prev => ({
                     ...prev,
@@ -127,6 +132,68 @@
                 setExpenseInputs(prev => ({ ...prev, [budgetId]: { amount: '', desc: '' } }));
             };
 
+            // 지출 삭제
+            const deleteLog = (budgetId, logId) => {
+                if(!window.confirm('이 지출 내역을 삭제하시겠습니까?')) return;
+
+                setBudgets(budgets.map(budget => {
+                    if(budget.id !== budgetId) return budget;
+
+                    const logToDelete = budget.logs.find(l => l.id === logId);
+                    const newLogs = budget.logs.filter(l => l.id !== logId);
+                    
+                    return {
+                        ...budget,
+                        spent: budget.spent - (logToDelete ? logToDelete.amount : 0),
+                        logs: newLogs
+                    };
+                }));
+            };
+
+            // 지출 수정 모달 열기
+            const openEditLogModal = (budgetId, log) => {
+                setEditingLog({
+                    budgetId,
+                    logId: log.id,
+                    desc: log.desc,
+                    amount: log.amount
+                });
+                setIsEditModalOpen(true);
+            };
+
+            // 지출 수정 저장
+            const handleUpdateLog = (e) => {
+                e.preventDefault();
+                if(!editingLog) return;
+
+                const newAmount = parseInt(editingLog.amount);
+                
+                setBudgets(budgets.map(budget => {
+                    if(budget.id !== editingLog.budgetId) return budget;
+
+                    // 기존 로그 찾기 (차액 계산을 위해)
+                    const oldLog = budget.logs.find(l => l.id === editingLog.logId);
+                    const amountDiff = newAmount - oldLog.amount;
+
+                    const newLogs = budget.logs.map(l => {
+                        if(l.id === editingLog.logId) {
+                            return { ...l, desc: editingLog.desc, amount: newAmount };
+                        }
+                        return l;
+                    });
+
+                    return {
+                        ...budget,
+                        spent: budget.spent + amountDiff,
+                        logs: newLogs
+                    };
+                }));
+
+                setIsEditModalOpen(false);
+                setEditingLog(null);
+            };
+
+
             return (
                 <div className="min-h-screen bg-white text-gray-800 font-sans relative pb-24">
                     <div className="max-w-md mx-auto p-4">
@@ -155,6 +222,7 @@
                                                 <button 
                                                     onClick={() => deleteBudget(budget.id)}
                                                     className="text-gray-400 hover:text-red-500"
+                                                    title="예산 삭제"
                                                 >
                                                     <TrashIcon className="w-4 h-4" />
                                                 </button>
@@ -162,18 +230,13 @@
 
                                             {/* 핵심: 총 예산 vs 남은 돈 비교 */}
                                             <div className="flex justify-between items-center mb-6">
-                                                {/* 왼쪽: 총 예산 (파란색) */}
                                                 <div className="text-left">
                                                     <p className="text-xs text-gray-500 mb-1">총 예산</p>
                                                     <p className="text-2xl font-bold text-blue-600">
                                                         {formatMoney(budget.total)}
                                                     </p>
                                                 </div>
-
-                                                {/* 구분선 */}
                                                 <div className="h-8 w-px bg-blue-200 mx-2 opacity-50"></div>
-
-                                                {/* 오른쪽: 남은 돈 (빨간색) */}
                                                 <div className="text-right">
                                                     <p className="text-xs text-gray-500 mb-1">남은 돈</p>
                                                     <p className="text-2xl font-bold text-red-600">
@@ -182,7 +245,7 @@
                                                 </div>
                                             </div>
 
-                                            {/* 지출 입력 (흰색 배경으로 강조) */}
+                                            {/* 지출 입력 */}
                                             <div className="flex gap-2 mb-4">
                                                 <input
                                                     type="text"
@@ -207,22 +270,39 @@
                                                 </button>
                                             </div>
 
-                                            {/* 지출 목록 */}
+                                            {/* 지출 목록 (업데이트됨) */}
                                             {budget.logs.length > 0 && (
                                                 <div className="bg-white/60 rounded-lg p-3 border border-blue-100/50">
                                                     <ul className="space-y-2">
-                                                        {budget.logs.slice(0, 3).map((log) => (
-                                                            <li key={log.id} className="flex justify-between text-xs text-gray-600">
-                                                                <span>{log.desc}</span>
-                                                                <span>-{formatMoney(log.amount)}</span>
+                                                        {budget.logs.map((log) => (
+                                                            <li key={log.id} className="flex justify-between items-center text-xs text-gray-600 group">
+                                                                <div className="flex-1 truncate mr-2">
+                                                                    <span className="font-medium text-gray-700">{log.desc}</span>
+                                                                </div>
+                                                                <div className="flex items-center gap-2">
+                                                                    <span className="font-bold">-{formatMoney(log.amount)}</span>
+                                                                    
+                                                                    {/* 수정/삭제 버튼 그룹 */}
+                                                                    <div className="flex items-center gap-1 opacity-100 sm:opacity-0 group-hover:opacity-100 transition-opacity">
+                                                                        <button 
+                                                                            onClick={() => openEditLogModal(budget.id, log)}
+                                                                            className="p-1 bg-gray-100 rounded hover:bg-blue-100 text-gray-500 hover:text-blue-600"
+                                                                            title="수정"
+                                                                        >
+                                                                            <PencilIcon className="w-3 h-3" />
+                                                                        </button>
+                                                                        <button 
+                                                                            onClick={() => deleteLog(budget.id, log.id)}
+                                                                            className="p-1 bg-gray-100 rounded hover:bg-red-100 text-gray-500 hover:text-red-600"
+                                                                            title="삭제"
+                                                                        >
+                                                                            <XIcon className="w-3 h-3" />
+                                                                        </button>
+                                                                    </div>
+                                                                </div>
                                                             </li>
                                                         ))}
                                                     </ul>
-                                                    {budget.logs.length > 3 && (
-                                                        <p className="text-[10px] text-gray-400 text-center mt-2">
-                                                            + {budget.logs.length - 3}개의 내역 더보기
-                                                        </p>
-                                                    )}
                                                 </div>
                                             )}
                                         </div>
@@ -232,17 +312,17 @@
                         </div>
                     </div>
 
-                    {/* 우측 하단 Floating Action Button (FAB) */}
+                    {/* FAB (예산 추가 버튼) */}
                     <button
                         onClick={() => setIsModalOpen(true)}
-                        className="fixed bottom-6 right-6 w-14 h-14 bg-blue-600 text-white rounded-full shadow-lg flex items-center justify-center hover:bg-blue-700 transition-transform hover:scale-105 active:scale-95 z-50 border-2 border-white"
+                        className="fixed bottom-6 right-6 w-14 h-14 bg-blue-600 text-white rounded-full shadow-lg flex items-center justify-center hover:bg-blue-700 transition-transform hover:scale-105 active:scale-95 z-40 border-2 border-white"
                     >
                         <PlusIcon className="w-8 h-8" />
                     </button>
 
                     {/* 예산 추가 모달 */}
                     {isModalOpen && (
-                        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4 backdrop-blur-sm">
+                        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4 backdrop-blur-sm animate-fade-in">
                             <div className="bg-white rounded-2xl p-6 w-full max-w-sm shadow-xl border border-gray-100">
                                 <div className="flex justify-between items-center mb-6">
                                     <h2 className="text-xl font-bold text-gray-800">새 예산 추가</h2>
@@ -272,30 +352,17 @@
                                             value={newBudgetAmount}
                                             onChange={(e) => setNewBudgetAmount(e.target.value)}
                                         />
-                                        
-                                        {/* 간편 금액 추가 버튼들 */}
                                         <div className="flex gap-2 mt-2">
-                                            <button
-                                                type="button"
-                                                onClick={() => addAmountToInput(10000)}
-                                                className="flex-1 py-2 bg-gray-50 text-gray-600 text-sm font-medium rounded-lg hover:bg-gray-100 border border-gray-200 transition-colors"
-                                            >
-                                                +1만
-                                            </button>
-                                            <button
-                                                type="button"
-                                                onClick={() => addAmountToInput(50000)}
-                                                className="flex-1 py-2 bg-gray-50 text-gray-600 text-sm font-medium rounded-lg hover:bg-gray-100 border border-gray-200 transition-colors"
-                                            >
-                                                +5만
-                                            </button>
-                                            <button
-                                                type="button"
-                                                onClick={() => addAmountToInput(100000)}
-                                                className="flex-1 py-2 bg-gray-50 text-gray-600 text-sm font-medium rounded-lg hover:bg-gray-100 border border-gray-200 transition-colors"
-                                            >
-                                                +10만
-                                            </button>
+                                            {[10000, 50000, 100000].map(amt => (
+                                                <button
+                                                    key={amt}
+                                                    type="button"
+                                                    onClick={() => addAmountToInput(amt)}
+                                                    className="flex-1 py-2 bg-gray-50 text-gray-600 text-sm font-medium rounded-lg hover:bg-gray-100 border border-gray-200"
+                                                >
+                                                    +{amt/10000}만
+                                                </button>
+                                            ))}
                                         </div>
                                     </div>
                                     <button 
@@ -308,6 +375,48 @@
                             </div>
                         </div>
                     )}
+
+                    {/* 지출 수정 모달 (신규 추가) */}
+                    {isEditModalOpen && editingLog && (
+                        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4 backdrop-blur-sm">
+                            <div className="bg-white rounded-2xl p-6 w-full max-w-sm shadow-xl border border-gray-100">
+                                <div className="flex justify-between items-center mb-6">
+                                    <h2 className="text-xl font-bold text-gray-800">지출 내역 수정</h2>
+                                    <button onClick={() => { setIsEditModalOpen(false); setEditingLog(null); }} className="text-gray-400 hover:text-gray-600">
+                                        <XIcon className="w-6 h-6" />
+                                    </button>
+                                </div>
+                                
+                                <form onSubmit={handleUpdateLog} className="space-y-4">
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-600 mb-1">내용</label>
+                                        <input
+                                            type="text"
+                                            className="w-full p-3 bg-blue-50 border border-blue-100 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                            value={editingLog.desc}
+                                            onChange={(e) => setEditingLog({...editingLog, desc: e.target.value})}
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-600 mb-1">금액</label>
+                                        <input
+                                            type="number"
+                                            className="w-full p-3 bg-blue-50 border border-blue-100 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                            value={editingLog.amount}
+                                            onChange={(e) => setEditingLog({...editingLog, amount: e.target.value})}
+                                        />
+                                    </div>
+                                    <button 
+                                        type="submit"
+                                        className="w-full bg-blue-600 text-white py-4 rounded-xl font-bold text-lg hover:bg-blue-700 mt-4 shadow-lg shadow-blue-200"
+                                    >
+                                        수정 완료
+                                    </button>
+                                </form>
+                            </div>
+                        </div>
+                    )}
+
                 </div>
             );
         }
