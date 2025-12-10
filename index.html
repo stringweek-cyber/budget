@@ -15,6 +15,8 @@
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700;900&display=swap" rel="stylesheet">
     <style>
         body { font-family: 'Noto Sans KR', sans-serif; }
+        .animate-fade-in { animation: fadeIn 0.2s ease-out; }
+        @keyframes fadeIn { from { opacity: 0; transform: scale(0.95); } to { opacity: 1; transform: scale(1); } }
     </style>
 </head>
 <body class="bg-white">
@@ -38,6 +40,12 @@
         );
         const PencilIcon = ({ className }) => (
             <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/><path d="m15 5 4 4"/></svg>
+        );
+        const ArrowUpIcon = ({ className }) => (
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="m18 15-6-6-6 6"/></svg>
+        );
+        const ArrowDownIcon = ({ className }) => (
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="m6 9 6 6 6-6"/></svg>
         );
 
         function App() {
@@ -75,7 +83,7 @@
                 if (!newBudgetName || !newBudgetAmount) return;
 
                 const newBudget = {
-                    id: Date.now(),
+                    id: Date.now() + Math.random(), // 고유 ID 강화
                     name: newBudgetName,
                     total: parseInt(newBudgetAmount),
                     spent: 0,
@@ -90,8 +98,27 @@
 
             const deleteBudget = (id) => {
                 if (window.confirm('이 예산 항목을 통째로 삭제할까요?')) {
-                    setBudgets(budgets.filter(b => b.id !== id));
+                    // 오류 수정: setTimeout을 사용하여 이벤트 버블링 후 상태 업데이트
+                    setTimeout(() => {
+                        setBudgets(prev => prev.filter(b => b.id !== id));
+                    }, 0);
                 }
+            };
+
+            // 순서 변경 함수 (direction: -1 위로, 1 아래로)
+            const moveBudget = (index, direction) => {
+                const newBudgets = [...budgets];
+                const targetIndex = index + direction;
+
+                // 범위 체크
+                if (targetIndex < 0 || targetIndex >= newBudgets.length) return;
+
+                // 순서 교환 (Swap)
+                const temp = newBudgets[index];
+                newBudgets[index] = newBudgets[targetIndex];
+                newBudgets[targetIndex] = temp;
+
+                setBudgets(newBudgets);
             };
 
             const addAmountToInput = (amount) => {
@@ -122,7 +149,7 @@
                         return {
                             ...budget,
                             spent: budget.spent + amount,
-                            logs: [{ id: Date.now(), amount, desc, date: new Date().toLocaleDateString() }, ...budget.logs]
+                            logs: [{ id: Date.now() + Math.random(), amount, desc, date: new Date().toLocaleDateString() }, ...budget.logs]
                         };
                     }
                     return budget;
@@ -136,18 +163,21 @@
             const deleteLog = (budgetId, logId) => {
                 if(!window.confirm('이 지출 내역을 삭제하시겠습니까?')) return;
 
-                setBudgets(budgets.map(budget => {
-                    if(budget.id !== budgetId) return budget;
+                // 오류 수정: setTimeout을 사용하여 안전하게 DOM 제거
+                setTimeout(() => {
+                    setBudgets(prev => prev.map(budget => {
+                        if(budget.id !== budgetId) return budget;
 
-                    const logToDelete = budget.logs.find(l => l.id === logId);
-                    const newLogs = budget.logs.filter(l => l.id !== logId);
-                    
-                    return {
-                        ...budget,
-                        spent: budget.spent - (logToDelete ? logToDelete.amount : 0),
-                        logs: newLogs
-                    };
-                }));
+                        const logToDelete = budget.logs.find(l => l.id === logId);
+                        const newLogs = budget.logs.filter(l => l.id !== logId);
+                        
+                        return {
+                            ...budget,
+                            spent: budget.spent - (logToDelete ? logToDelete.amount : 0),
+                            logs: newLogs
+                        };
+                    }));
+                }, 0);
             };
 
             // 지출 수정 모달 열기
@@ -211,21 +241,47 @@
                                     <p>우측 하단 + 버튼을 눌러<br/>예산을 추가해보세요.</p>
                                 </div>
                             ) : (
-                                budgets.map((budget) => {
+                                budgets.map((budget, index) => { // index 추가
                                     const remaining = budget.total - budget.spent;
                                     
                                     return (
-                                        <div key={budget.id} className="bg-blue-50 rounded-2xl shadow-sm border border-blue-100 p-5">
-                                            {/* 상단: 이름 및 삭제 */}
+                                        <div key={budget.id} className="bg-blue-50 rounded-2xl shadow-sm border border-blue-100 p-5 transition-all hover:shadow-md">
+                                            {/* 상단: 이름 및 컨트롤(순서변경, 삭제) */}
                                             <div className="flex justify-between items-center mb-4 border-b border-blue-100 pb-2">
-                                                <h3 className="text-lg font-bold text-gray-800">{budget.name}</h3>
-                                                <button 
-                                                    onClick={() => deleteBudget(budget.id)}
-                                                    className="text-gray-400 hover:text-red-500"
-                                                    title="예산 삭제"
-                                                >
-                                                    <TrashIcon className="w-4 h-4" />
-                                                </button>
+                                                {/* span으로 감싸서 텍스트 노드 오류 방지 */}
+                                                <h3 className="text-lg font-bold text-gray-800">
+                                                    <span>{budget.name}</span>
+                                                </h3>
+                                                <div className="flex items-center gap-1">
+                                                    {/* 순서 변경 버튼 그룹 */}
+                                                    <div className="flex mr-2 bg-gray-50 rounded-lg p-0.5">
+                                                        <button 
+                                                            onClick={() => moveBudget(index, -1)}
+                                                            disabled={index === 0}
+                                                            className={`p-1 rounded hover:bg-white hover:shadow-sm ${index === 0 ? 'text-gray-300 cursor-not-allowed' : 'text-gray-500 hover:text-blue-600'}`}
+                                                            title="위로 이동"
+                                                        >
+                                                            <ArrowUpIcon className="w-4 h-4" />
+                                                        </button>
+                                                        <button 
+                                                            onClick={() => moveBudget(index, 1)}
+                                                            disabled={index === budgets.length - 1}
+                                                            className={`p-1 rounded hover:bg-white hover:shadow-sm ${index === budgets.length - 1 ? 'text-gray-300 cursor-not-allowed' : 'text-gray-500 hover:text-blue-600'}`}
+                                                            title="아래로 이동"
+                                                        >
+                                                            <ArrowDownIcon className="w-4 h-4" />
+                                                        </button>
+                                                    </div>
+                                                    
+                                                    {/* 삭제 버튼 */}
+                                                    <button 
+                                                        onClick={() => deleteBudget(budget.id)}
+                                                        className="text-gray-400 hover:text-red-500 p-1 rounded hover:bg-red-50"
+                                                        title="예산 삭제"
+                                                    >
+                                                        <TrashIcon className="w-4 h-4" />
+                                                    </button>
+                                                </div>
                                             </div>
 
                                             {/* 핵심: 총 예산 vs 남은 돈 비교 */}
@@ -233,14 +289,16 @@
                                                 <div className="text-left">
                                                     <p className="text-xs text-gray-500 mb-1">총 예산</p>
                                                     <p className="text-2xl font-bold text-blue-600">
-                                                        {formatMoney(budget.total)}
+                                                        {/* span으로 감싸서 텍스트 노드 오류 방지 */}
+                                                        <span>{formatMoney(budget.total)}</span>
                                                     </p>
                                                 </div>
                                                 <div className="h-8 w-px bg-blue-200 mx-2 opacity-50"></div>
                                                 <div className="text-right">
                                                     <p className="text-xs text-gray-500 mb-1">남은 돈</p>
                                                     <p className="text-2xl font-bold text-red-600">
-                                                        {formatMoney(remaining)}
+                                                        {/* span으로 감싸서 텍스트 노드 오류 방지 */}
+                                                        <span>{formatMoney(remaining)}</span>
                                                     </p>
                                                 </div>
                                             </div>
@@ -277,10 +335,15 @@
                                                         {budget.logs.map((log) => (
                                                             <li key={log.id} className="flex justify-between items-center text-xs text-gray-600 group">
                                                                 <div className="flex-1 truncate mr-2">
-                                                                    <span className="font-medium text-gray-700">{log.desc}</span>
+                                                                    {/* span으로 감싸서 텍스트 노드 오류 방지 */}
+                                                                    <span className="font-medium text-gray-700">
+                                                                        {log.desc}
+                                                                    </span>
                                                                 </div>
                                                                 <div className="flex items-center gap-2">
-                                                                    <span className="font-bold">-{formatMoney(log.amount)}</span>
+                                                                    <span className="font-bold">
+                                                                        -{formatMoney(log.amount)}
+                                                                    </span>
                                                                     
                                                                     {/* 수정/삭제 버튼 그룹 */}
                                                                     <div className="flex items-center gap-1 opacity-100 sm:opacity-0 group-hover:opacity-100 transition-opacity">
