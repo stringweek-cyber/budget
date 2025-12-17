@@ -103,21 +103,21 @@
             if (loading) return <div className="text-center text-xs text-gray-400 py-2">환율 로딩 중...</div>;
 
             return (
-                <div className="bg-blue-50 rounded-2xl border border-blue-100 p-3 mb-6 shadow-sm">
-                    <div className="flex items-center justify-between gap-2">
+                <div className="bg-blue-50 rounded-2xl border border-blue-100 p-4 mb-6 shadow-sm">
+                    <div className="flex items-center justify-between gap-3">
                         <div className="flex-1 relative">
                             <input 
                                 type="number" 
                                 value={krw}
                                 onChange={handleKrwChange}
-                                placeholder="KRW"
-                                className="w-full text-right pr-6 pl-2 py-1 bg-white rounded-lg border border-blue-100 focus:outline-none focus:border-blue-400 text-gray-800 font-bold"
+                                placeholder="0"
+                                className="w-full text-right pr-8 pl-2 py-2 bg-white rounded-xl border border-blue-100 focus:outline-none focus:border-blue-400 text-gray-800 text-lg font-bold"
                             />
-                            <span className="absolute right-2 top-1.5 text-xs text-gray-400 pointer-events-none">원</span>
+                            <span className="absolute right-3 top-2.5 text-lg font-bold text-gray-500 pointer-events-none">원</span>
                         </div>
                         
                         <div className="text-blue-400">
-                            <ExchangeIcon className="w-4 h-4" />
+                            <ExchangeIcon className="w-5 h-5" />
                         </div>
 
                         <div className="flex-1 relative">
@@ -125,15 +125,15 @@
                                 type="number" 
                                 value={jpy}
                                 onChange={handleJpyChange}
-                                placeholder="JPY"
-                                className="w-full text-right pr-6 pl-2 py-1 bg-white rounded-lg border border-blue-100 focus:outline-none focus:border-blue-400 text-gray-800 font-bold"
+                                placeholder="0"
+                                className="w-full text-right pr-8 pl-2 py-2 bg-white rounded-xl border border-blue-100 focus:outline-none focus:border-blue-400 text-gray-800 text-lg font-bold"
                             />
-                            <span className="absolute right-2 top-1.5 text-xs text-gray-400 pointer-events-none">엔</span>
+                            <span className="absolute right-3 top-2.5 text-lg font-bold text-gray-500 pointer-events-none">엔</span>
                         </div>
                     </div>
-                    <div className="text-center mt-1">
-                        <p className="text-[10px] text-gray-400">
-                            현재 환율: 100엔 = {(rate * 100).toFixed(2)}원
+                    <div className="text-center mt-2">
+                        <p className="text-sm font-medium text-gray-500">
+                            현재 환율: 100엔 = <span className="text-blue-600 font-bold">{(rate * 100).toFixed(2)}</span>원
                         </p>
                     </div>
                 </div>
