@@ -2,7 +2,7 @@
 <html lang="ko">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>결정적 소비</title>
     <!-- React 및 ReactDOM CDN -->
     <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
@@ -14,66 +14,72 @@
     <!-- 폰트 -->
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700;900&display=swap" rel="stylesheet">
     <style>
-        body { font-family: 'Noto Sans KR', sans-serif; }
+        body { font-family: 'Noto Sans KR', sans-serif; -webkit-tap-highlight-color: transparent; }
         .animate-fade-in { animation: fadeIn 0.2s ease-out; }
-        @keyframes fadeIn { from { opacity: 0; transform: scale(0.95); } to { opacity: 1; transform: scale(1); } }
+        .animate-slide-up { animation: slideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1); }
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+        @keyframes slideUp { from { transform: translateY(20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+        
         /* 숫자 입력 화살표 제거 */
         input[type=number]::-webkit-inner-spin-button, 
         input[type=number]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
     </style>
 </head>
-<body class="bg-white">
+<body class="bg-white text-gray-900 select-none">
     <div id="root"></div>
 
     <script type="text/babel">
         const { useState, useEffect } = React;
 
-        // 아이콘 컴포넌트들
-        const WalletIcon = () => (
-            <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-blue-600 mr-2"><path d="M21 12V7H5a2 2 0 0 1 0-4h14v4"/><path d="M3 5v14a2 2 0 0 0 2 2h16v-5"/><path d="M18 12a2 2 0 0 0 0 4h4v-4Z"/></svg>
+        // --- 아이콘 컴포넌트 ---
+        const WalletIcon = ({ className }) => (
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="M21 12V7H5a2 2 0 0 1 0-4h14v4"/><path d="M3 5v14a2 2 0 0 0 2 2h16v-5"/><path d="M18 12a2 2 0 0 0 0 4h4v-4Z"/></svg>
         );
         const PlusIcon = ({ className }) => (
-            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="M5 12h14"/><path d="M12 5v14"/></svg>
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="M5 12h14"/><path d="M12 5v14"/></svg>
         );
         const TrashIcon = ({ className }) => (
-            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/><line x1="10" x2="10" y1="11" y2="17"/><line x1="14" x2="14" y1="11" y2="17"/></svg>
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/><line x1="10" x2="10" y1="11" y2="17"/><line x1="14" x2="14" y1="11" y2="17"/></svg>
         );
         const XIcon = ({ className }) => (
-            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
         );
         const PencilIcon = ({ className }) => (
-            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/><path d="m15 5 4 4"/></svg>
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/><path d="m15 5 4 4"/></svg>
         );
         const ArrowUpIcon = ({ className }) => (
-            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="m18 15-6-6-6 6"/></svg>
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="m18 15-6-6-6 6"/></svg>
         );
         const ArrowDownIcon = ({ className }) => (
-            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="m6 9 6 6 6-6"/></svg>
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="m6 9 6 6 6-6"/></svg>
         );
         const ExchangeIcon = ({ className }) => (
-            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="M8 3 4 7l4 4"/><path d="M4 7h16"/><path d="m16 21 4-4-4-4"/><path d="M20 17H4"/></svg>
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="M8 3 4 7l4 4"/><path d="M4 7h16"/><path d="m16 21 4-4-4-4"/><path d="M20 17H4"/></svg>
+        );
+        const CheckIcon = ({ className }) => (
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="M20 6 9 17l-5-5"/></svg>
+        );
+        const CalculatorIcon = ({ className }) => (
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><rect x="4" y="2" width="16" height="20" rx="2" /><line x1="8" x2="16" y1="6" y2="6" /><line x1="16" x2="16" y1="14" y2="18" /><path d="M16 10h.01" /><path d="M12 10h.01" /><path d="M8 10h.01" /><path d="M12 14h.01" /><path d="M8 14h.01" /><path d="M12 18h.01" /><path d="M8 18h.01" /></svg>
         );
 
-        // 환율 계산기 컴포넌트
+        // --- 환율 계산기 컴포넌트 (본문용) ---
         const CurrencyConverter = () => {
             const [krw, setKrw] = useState('');
             const [jpy, setJpy] = useState('');
-            const [rate, setRate] = useState(null); // 100엔당 원화 가격
+            const [rate, setRate] = useState(null);
             const [loading, setLoading] = useState(true);
 
             useEffect(() => {
-                // 완전 무료 오픈소스 API (Frankfurter) 사용으로 변경
-                // 1 JPY에 대한 KRW 비율을 가져옴
                 fetch('https://api.frankfurter.app/latest?from=JPY&to=KRW')
                     .then(res => res.json())
                     .then(data => {
-                        // data.rates.KRW는 1엔당 원화 가격
                         setRate(data.rates.KRW);
                         setLoading(false);
                     })
                     .catch(err => {
-                        console.error("환율 정보 로드 실패", err);
-                        setRate(9.0); // 실패 시 대략적인 기본값 설정
+                        console.error("환율 로드 실패", err);
+                        setRate(9.0); // Fallback
                         setLoading(false);
                     });
             }, []);
@@ -81,101 +87,162 @@
             const handleKrwChange = (e) => {
                 const val = e.target.value;
                 setKrw(val);
-                if (val && rate) {
-                    // 원화 -> 엔화: 원화 / 환율
-                    setJpy((parseFloat(val) / rate).toFixed(0));
-                } else {
-                    setJpy('');
-                }
+                if (val && rate) setJpy((parseFloat(val) / rate).toFixed(0));
+                else setJpy('');
             };
 
             const handleJpyChange = (e) => {
                 const val = e.target.value;
                 setJpy(val);
-                if (val && rate) {
-                    // 엔화 -> 원화: 엔화 * 환율
-                    setKrw((parseFloat(val) * rate).toFixed(0));
-                } else {
-                    setKrw('');
-                }
+                if (val && rate) setKrw((parseFloat(val) * rate).toFixed(0));
+                else setKrw('');
             };
-
-            if (loading) return <div className="text-center text-xs text-gray-400 py-2">환율 로딩 중...</div>;
 
             return (
                 <div className="bg-blue-50 rounded-2xl border border-blue-100 p-4 mb-6 shadow-sm">
                     <div className="flex items-center justify-between gap-3">
                         <div className="flex-1 relative">
                             <input 
-                                type="number" 
-                                value={krw}
-                                onChange={handleKrwChange}
-                                placeholder="0"
+                                type="number" inputMode="numeric"
+                                value={krw} onChange={handleKrwChange} placeholder="0"
                                 className="w-full text-right pr-8 pl-2 py-2 bg-white rounded-xl border border-blue-100 focus:outline-none focus:border-blue-400 text-gray-800 text-lg font-bold"
                             />
                             <span className="absolute right-3 top-2.5 text-lg font-bold text-gray-500 pointer-events-none">원</span>
                         </div>
-                        
                         <div className="text-blue-400">
                             <ExchangeIcon className="w-5 h-5" />
                         </div>
-
                         <div className="flex-1 relative">
                             <input 
-                                type="number" 
-                                value={jpy}
-                                onChange={handleJpyChange}
-                                placeholder="0"
+                                type="number" inputMode="numeric"
+                                value={jpy} onChange={handleJpyChange} placeholder="0"
                                 className="w-full text-right pr-8 pl-2 py-2 bg-white rounded-xl border border-blue-100 focus:outline-none focus:border-blue-400 text-gray-800 text-lg font-bold"
                             />
                             <span className="absolute right-3 top-2.5 text-lg font-bold text-gray-500 pointer-events-none">엔</span>
                         </div>
                     </div>
                     <div className="text-center mt-2">
-                        <p className="text-sm font-medium text-gray-500">
-                            현재 환율: 100엔 = <span className="text-blue-600 font-bold">{(rate * 100).toFixed(2)}</span>원
-                        </p>
+                         {loading ? (
+                            <p className="text-xs text-gray-400">환율 로딩 중...</p>
+                        ) : (
+                            <p className="text-sm font-medium text-gray-500">
+                                현재 환율: 100엔 = <span className="text-blue-600 font-bold">{(rate * 100).toFixed(2)}</span>원
+                            </p>
+                        )}
                     </div>
                 </div>
             );
         };
 
+        // --- 일반 계산기 컴포넌트 (팝업용) ---
+        const StandardCalculator = () => {
+            const [display, setDisplay] = useState('0');
+            const [equation, setEquation] = useState('');
+
+            const handleBtn = (val) => {
+                if (val === 'C') {
+                    setDisplay('0');
+                    setEquation('');
+                } else if (val === '=') {
+                    try {
+                        // 간단한 계산 로직
+                        const result = Function('"use strict";return (' + equation + display + ')')();
+                        setDisplay(String(result));
+                        setEquation('');
+                    } catch (e) {
+                        setDisplay('Error');
+                    }
+                } else if (['+', '-', '*', '/'].includes(val)) {
+                    setEquation(equation + display + val);
+                    setDisplay('0');
+                } else {
+                    // 숫자 입력
+                    if (display === '0') setDisplay(val);
+                    else setDisplay(display + val);
+                }
+            };
+
+            const buttons = [
+                '7', '8', '9', '/',
+                '4', '5', '6', '*',
+                '1', '2', '3', '-',
+                'C', '0', '=', '+'
+            ];
+
+            return (
+                <div className="w-full">
+                    <div className="bg-gray-100 rounded-xl p-4 mb-4 text-right">
+                         <div className="text-gray-400 text-xs h-4">{equation}</div>
+                         <div className="text-3xl font-bold text-gray-800 truncate">{display}</div>
+                    </div>
+                    <div className="grid grid-cols-4 gap-2">
+                        {buttons.map((btn) => (
+                            <button
+                                key={btn}
+                                onClick={() => handleBtn(btn)}
+                                className={`
+                                    p-4 rounded-xl font-bold text-lg transition-all active:scale-95
+                                    ${btn === '=' ? 'bg-blue-600 text-white col-span-1' : ''}
+                                    ${btn === 'C' ? 'bg-red-100 text-red-500' : ''}
+                                    ${['/', '*', '-', '+'].includes(btn) ? 'bg-blue-50 text-blue-600' : 'bg-gray-50 text-gray-700'}
+                                    ${!['=', 'C', '/', '*', '-', '+'].includes(btn) ? 'hover:bg-gray-100' : ''}
+                                `}
+                            >
+                                {btn}
+                            </button>
+                        ))}
+                    </div>
+                </div>
+            );
+        };
+
+        // --- 메인 App 컴포넌트 ---
         function App() {
-            // 예산 데이터 상태 관리
             const [budgets, setBudgets] = useState(() => {
                 const saved = localStorage.getItem('myBudgets');
                 return saved ? JSON.parse(saved) : [];
             });
 
-            // 예산 추가 모달 상태
+            // 모달 상태
             const [isModalOpen, setIsModalOpen] = useState(false);
+            const [isCalcOpen, setIsCalcOpen] = useState(false); // 일반 계산기 모달
+            const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+
+            // 입력 상태
             const [newBudgetName, setNewBudgetName] = useState('');
             const [newBudgetAmount, setNewBudgetAmount] = useState('');
-
-            // 지출 수정 모달 상태
-            const [isEditModalOpen, setIsEditModalOpen] = useState(false);
-            const [editingLog, setEditingLog] = useState(null); // { budgetId, logId, desc, amount }
-
-            // 지출 입력 상태 (각 예산 카드별)
+            const [editingLog, setEditingLog] = useState(null); 
             const [expenseInputs, setExpenseInputs] = useState({});
 
-            // 데이터 변경 시 로컬 스토리지 저장
+            // 예산 제목 수정 상태
+            const [editingBudgetId, setEditingBudgetId] = useState(null);
+            const [editingBudgetName, setEditingBudgetName] = useState('');
+
             useEffect(() => {
                 localStorage.setItem('myBudgets', JSON.stringify(budgets));
             }, [budgets]);
 
-            // 숫자 포맷팅 (원화)
+            // 날짜/시간 포맷팅 함수
+            const getFormattedDateTime = () => {
+                const now = new Date();
+                const month = now.getMonth() + 1;
+                const day = now.getDate();
+                const hours = now.getHours();
+                const minutes = now.getMinutes().toString().padStart(2, '0');
+                return `${month}/${day} ${hours}:${minutes}`;
+            };
+
             const formatMoney = (amount) => {
                 return new Intl.NumberFormat('ko-KR', { style: 'currency', currency: 'KRW' }).format(amount);
             };
 
-            // 1. 예산 관련 기능 ==========================================
+            // --- 예산 관련 기능 ---
             const handleAddBudget = (e) => {
                 e.preventDefault();
                 if (!newBudgetName || !newBudgetAmount) return;
 
                 const newBudget = {
-                    id: Date.now() + Math.random(), // 고유 ID 강화
+                    id: Date.now() + Math.random(),
                     name: newBudgetName,
                     total: parseInt(newBudgetAmount),
                     spent: 0,
@@ -190,25 +257,17 @@
 
             const deleteBudget = (id) => {
                 if (window.confirm('이 예산 항목을 통째로 삭제할까요?')) {
-                    setTimeout(() => {
-                        setBudgets(prev => prev.filter(b => b.id !== id));
-                    }, 0);
+                    setBudgets(prev => prev.filter(b => b.id !== id));
                 }
             };
 
-            // 순서 변경 함수 (direction: -1 위로, 1 아래로)
             const moveBudget = (index, direction) => {
                 const newBudgets = [...budgets];
                 const targetIndex = index + direction;
-
-                // 범위 체크
                 if (targetIndex < 0 || targetIndex >= newBudgets.length) return;
-
-                // 순서 교환 (Swap)
                 const temp = newBudgets[index];
                 newBudgets[index] = newBudgets[targetIndex];
                 newBudgets[targetIndex] = temp;
-
                 setBudgets(newBudgets);
             };
 
@@ -219,7 +278,19 @@
                 });
             };
 
-            // 2. 지출 관련 기능 (추가/삭제/수정) ==========================
+            // 예산 제목 수정
+            const startEditingBudget = (budget) => {
+                setEditingBudgetId(budget.id);
+                setEditingBudgetName(budget.name);
+            };
+
+            const saveBudgetTitle = (budgetId) => {
+                if (!editingBudgetName.trim()) return;
+                setBudgets(prev => prev.map(b => b.id === budgetId ? { ...b, name: editingBudgetName } : b));
+                setEditingBudgetId(null);
+            };
+
+            // --- 지출 관련 기능 ---
             const handleExpenseInputChange = (budgetId, field, value) => {
                 setExpenseInputs(prev => ({
                     ...prev,
@@ -227,20 +298,25 @@
                 }));
             };
 
-            // 지출 추가
             const addExpense = (budgetId) => {
                 const input = expenseInputs[budgetId];
                 if (!input || !input.amount) return;
 
                 const amount = parseInt(input.amount);
                 const desc = input.desc || '지출';
+                const dateStr = getFormattedDateTime();
 
                 const updatedBudgets = budgets.map(budget => {
                     if (budget.id === budgetId) {
                         return {
                             ...budget,
                             spent: budget.spent + amount,
-                            logs: [{ id: Date.now() + Math.random(), amount, desc, date: new Date().toLocaleDateString() }, ...budget.logs]
+                            logs: [{ 
+                                id: Date.now() + Math.random(), 
+                                amount, 
+                                desc, 
+                                date: dateStr 
+                            }, ...budget.logs]
                         };
                     }
                     return budget;
@@ -250,134 +326,137 @@
                 setExpenseInputs(prev => ({ ...prev, [budgetId]: { amount: '', desc: '' } }));
             };
 
-            // 지출 삭제
             const deleteLog = (budgetId, logId) => {
                 if(!window.confirm('이 지출 내역을 삭제하시겠습니까?')) return;
-
-                setTimeout(() => {
-                    setBudgets(prev => prev.map(budget => {
-                        if(budget.id !== budgetId) return budget;
-
-                        const logToDelete = budget.logs.find(l => l.id === logId);
-                        const newLogs = budget.logs.filter(l => l.id !== logId);
-                        
-                        return {
-                            ...budget,
-                            spent: budget.spent - (logToDelete ? logToDelete.amount : 0),
-                            logs: newLogs
-                        };
-                    }));
-                }, 0);
+                setBudgets(prev => prev.map(budget => {
+                    if(budget.id !== budgetId) return budget;
+                    const logToDelete = budget.logs.find(l => l.id === logId);
+                    return {
+                        ...budget,
+                        spent: budget.spent - (logToDelete ? logToDelete.amount : 0),
+                        logs: budget.logs.filter(l => l.id !== logId)
+                    };
+                }));
             };
 
-            // 지출 수정 모달 열기
             const openEditLogModal = (budgetId, log) => {
-                setEditingLog({
-                    budgetId,
-                    logId: log.id,
-                    desc: log.desc,
-                    amount: log.amount
-                });
+                setEditingLog({ budgetId, logId: log.id, desc: log.desc, amount: log.amount });
                 setIsEditModalOpen(true);
             };
 
-            // 지출 수정 저장
             const handleUpdateLog = (e) => {
                 e.preventDefault();
                 if(!editingLog) return;
-
                 const newAmount = parseInt(editingLog.amount);
-                
                 setBudgets(budgets.map(budget => {
                     if(budget.id !== editingLog.budgetId) return budget;
-
-                    // 기존 로그 찾기 (차액 계산을 위해)
                     const oldLog = budget.logs.find(l => l.id === editingLog.logId);
                     const amountDiff = newAmount - oldLog.amount;
-
                     const newLogs = budget.logs.map(l => {
-                        if(l.id === editingLog.logId) {
-                            return { ...l, desc: editingLog.desc, amount: newAmount };
-                        }
+                        if(l.id === editingLog.logId) return { ...l, desc: editingLog.desc, amount: newAmount };
                         return l;
                     });
-
-                    return {
-                        ...budget,
-                        spent: budget.spent + amountDiff,
-                        logs: newLogs
-                    };
+                    return { ...budget, spent: budget.spent + amountDiff, logs: newLogs };
                 }));
-
                 setIsEditModalOpen(false);
                 setEditingLog(null);
             };
 
-
             return (
-                <div className="min-h-screen bg-white text-gray-800 font-sans relative pb-24">
-                    <div className="max-w-md mx-auto p-4">
-                        
-                        {/* 심플한 헤더 */}
-                        <header className="flex items-center justify-center py-6 mb-2">
-                            <WalletIcon />
-                            <h1 className="text-2xl font-black text-gray-800 tracking-tight">결정적 소비</h1>
-                        </header>
+                <div className="min-h-screen bg-white text-gray-800 font-sans relative pb-24 pt-16">
+                    {/* 상단 고정 바 */}
+                    <header className="fixed top-0 left-0 right-0 h-16 bg-white/90 backdrop-blur-md z-40 flex items-center justify-between px-4 border-b border-gray-100 shadow-sm">
+                        {/* 좌상단 + 버튼 (예산 추가) */}
+                        <button
+                            onClick={() => setIsModalOpen(true)}
+                            className="bg-gray-100 text-gray-600 w-9 h-9 rounded-full flex items-center justify-center hover:bg-gray-200 transition-all active:scale-95"
+                            title="예산 추가"
+                        >
+                            <PlusIcon className="w-5 h-5" />
+                        </button>
 
-                        {/* 환율 계산기 (신규 추가) */}
+                        {/* 중앙 타이틀 */}
+                        <h1 className="text-xl font-black text-gray-800 tracking-tight flex items-center gap-1.5 absolute left-1/2 transform -translate-x-1/2">
+                            <WalletIcon className="w-6 h-6 text-blue-600" />
+                            <span>결정적 소비</span>
+                        </h1>
+
+                        {/* 우상단 일반 계산기 버튼 */}
+                        <button
+                            onClick={() => setIsCalcOpen(true)}
+                            className="bg-blue-600 text-white w-9 h-9 rounded-full flex items-center justify-center shadow-lg hover:bg-blue-700 transition-all active:scale-95 shadow-blue-200"
+                            title="계산기"
+                        >
+                            <CalculatorIcon className="w-5 h-5" />
+                        </button>
+                    </header>
+
+                    <div className="max-w-md mx-auto p-4 space-y-5">
+                        {/* 환율 계산기 (본문 상단 고정) */}
                         <CurrencyConverter />
 
-                        {/* 예산 목록 */}
-                        <div className="space-y-4">
-                            {budgets.length === 0 ? (
-                                <div className="text-center py-20 text-gray-400 bg-blue-50 rounded-2xl border border-blue-100 border-dashed">
-                                    <p>우측 하단 + 버튼을 눌러<br/>예산을 추가해보세요.</p>
-                                </div>
-                            ) : (
-                                budgets.map((budget, index) => { // index 추가
-                                    const remaining = budget.total - budget.spent;
-                                    
-                                    return (
-                                        <div key={budget.id} className="bg-blue-50 rounded-2xl shadow-sm border border-blue-100 p-5 transition-all hover:shadow-md">
-                                            {/* 상단: 이름 및 컨트롤(순서변경, 삭제) */}
-                                            <div className="flex justify-between items-center mb-4 border-b border-blue-100 pb-2">
-                                                <h3 className="text-lg font-bold text-gray-800">
-                                                    <span>{budget.name}</span>
-                                                </h3>
-                                                <div className="flex items-center gap-1">
-                                                    {/* 순서 변경 버튼 그룹 */}
-                                                    <div className="flex mr-2 bg-gray-50 rounded-lg p-0.5">
-                                                        <button 
-                                                            onClick={() => moveBudget(index, -1)}
-                                                            disabled={index === 0}
-                                                            className={`p-1 rounded hover:bg-white hover:shadow-sm ${index === 0 ? 'text-gray-300 cursor-not-allowed' : 'text-gray-500 hover:text-blue-600'}`}
-                                                            title="위로 이동"
-                                                        >
-                                                            <ArrowUpIcon className="w-4 h-4" />
-                                                        </button>
-                                                        <button 
-                                                            onClick={() => moveBudget(index, 1)}
-                                                            disabled={index === budgets.length - 1}
-                                                            className={`p-1 rounded hover:bg-white hover:shadow-sm ${index === budgets.length - 1 ? 'text-gray-300 cursor-not-allowed' : 'text-gray-500 hover:text-blue-600'}`}
-                                                            title="아래로 이동"
-                                                        >
-                                                            <ArrowDownIcon className="w-4 h-4" />
+                        {budgets.length === 0 ? (
+                            <div className="text-center py-20 text-gray-400 bg-blue-50 rounded-2xl border border-blue-100 border-dashed animate-fade-in">
+                                <p>좌측 상단 + 버튼을 눌러<br/>예산을 추가해보세요.</p>
+                            </div>
+                        ) : (
+                            budgets.map((budget, index) => {
+                                const remaining = budget.total - budget.spent;
+                                const percent = Math.min(100, Math.max(0, (budget.spent / budget.total) * 100));
+                                const isOver = remaining < 0;
+                                
+                                return (
+                                    <div key={budget.id} className="bg-blue-50 rounded-2xl shadow-sm border border-blue-100 p-5 transition-all hover:shadow-md animate-slide-up" style={{animationDelay: `${index * 0.05}s`}}>
+                                        {/* 카드 헤더 */}
+                                        <div className="flex justify-between items-center mb-4 border-b border-blue-100 pb-2">
+                                            <div className="flex-1 mr-2">
+                                                {editingBudgetId === budget.id ? (
+                                                    <div className="flex items-center gap-2">
+                                                        <input 
+                                                            type="text" 
+                                                            value={editingBudgetName}
+                                                            onChange={(e) => setEditingBudgetName(e.target.value)}
+                                                            className="w-full bg-white border border-blue-300 rounded px-2 py-1 text-lg font-bold outline-none"
+                                                            autoFocus
+                                                            onKeyDown={(e) => e.key === 'Enter' && saveBudgetTitle(budget.id)}
+                                                        />
+                                                        <button onClick={() => saveBudgetTitle(budget.id)} className="text-blue-600 bg-blue-100 p-1 rounded hover:bg-blue-200">
+                                                            <CheckIcon className="w-5 h-5" />
                                                         </button>
                                                     </div>
-                                                    
-                                                    {/* 삭제 버튼 */}
-                                                    <button 
-                                                        onClick={() => deleteBudget(budget.id)}
-                                                        className="text-gray-400 hover:text-red-500 p-1 rounded hover:bg-red-50"
-                                                        title="예산 삭제"
-                                                    >
-                                                        <TrashIcon className="w-4 h-4" />
-                                                    </button>
-                                                </div>
+                                                ) : (
+                                                    <div className="flex items-center gap-2 group">
+                                                        <h3 className="text-lg font-bold text-gray-800">
+                                                            {budget.name}
+                                                        </h3>
+                                                        <button 
+                                                            onClick={() => startEditingBudget(budget)} 
+                                                            className="text-gray-400 hover:text-blue-600 opacity-100 sm:opacity-0 group-hover:opacity-100 transition-opacity"
+                                                        >
+                                                            <PencilIcon className="w-4 h-4" />
+                                                        </button>
+                                                    </div>
+                                                )}
                                             </div>
 
-                                            {/* 핵심: 총 예산 vs 남은 돈 비교 */}
-                                            <div className="flex justify-between items-center mb-6">
+                                            <div className="flex items-center gap-1">
+                                                <div className="flex mr-2 bg-gray-50 rounded-lg p-0.5">
+                                                    <button onClick={() => moveBudget(index, -1)} disabled={index === 0} className={`p-1 rounded hover:bg-white hover:shadow-sm ${index === 0 ? 'text-gray-300 cursor-not-allowed' : 'text-gray-500 hover:text-blue-600'}`}>
+                                                        <ArrowUpIcon className="w-4 h-4" />
+                                                    </button>
+                                                    <button onClick={() => moveBudget(index, 1)} disabled={index === budgets.length - 1} className={`p-1 rounded hover:bg-white hover:shadow-sm ${index === budgets.length - 1 ? 'text-gray-300 cursor-not-allowed' : 'text-gray-500 hover:text-blue-600'}`}>
+                                                        <ArrowDownIcon className="w-4 h-4" />
+                                                    </button>
+                                                </div>
+                                                <button onClick={() => deleteBudget(budget.id)} className="text-gray-400 hover:text-red-500 p-1 rounded hover:bg-red-50">
+                                                    <TrashIcon className="w-4 h-4" />
+                                                </button>
+                                            </div>
+                                        </div>
+
+                                        {/* 예산 현황 */}
+                                        <div className="mb-1">
+                                            <div className="flex justify-between items-center mb-1">
                                                 <div className="text-left">
                                                     <p className="text-xs text-gray-500 mb-1">총 예산</p>
                                                     <p className="text-2xl font-bold text-blue-600">
@@ -392,182 +471,150 @@
                                                     </p>
                                                 </div>
                                             </div>
-
-                                            {/* 지출 입력 */}
-                                            <div className="flex gap-2 mb-4">
-                                                <input
-                                                    type="text"
-                                                    placeholder="내용"
-                                                    className="flex-1 min-w-0 p-2 text-sm bg-white border border-transparent rounded-lg focus:border-blue-500 outline-none transition-colors shadow-sm"
-                                                    value={expenseInputs[budget.id]?.desc || ''}
-                                                    onChange={(e) => handleExpenseInputChange(budget.id, 'desc', e.target.value)}
-                                                />
-                                                <input
-                                                    type="number"
-                                                    placeholder="금액"
-                                                    className="flex-1 min-w-0 p-2 text-sm bg-white border border-transparent rounded-lg focus:border-blue-500 outline-none transition-colors shadow-sm"
-                                                    value={expenseInputs[budget.id]?.amount || ''}
-                                                    onChange={(e) => handleExpenseInputChange(budget.id, 'amount', e.target.value)}
-                                                    onKeyDown={(e) => e.key === 'Enter' && addExpense(budget.id)}
-                                                />
-                                                <button 
-                                                    onClick={() => addExpense(budget.id)}
-                                                    className="bg-blue-600 text-white px-3 py-2 rounded-lg text-sm font-bold shrink-0 shadow-sm hover:bg-blue-700"
-                                                >
-                                                    입력
-                                                </button>
+                                            {/* 진행률 바 */}
+                                            <div className="w-full h-2.5 bg-blue-200/50 rounded-full mb-6 overflow-hidden">
+                                                <div 
+                                                    className={`h-full rounded-full transition-all duration-300 ${isOver ? 'bg-red-500' : 'bg-blue-500'}`}
+                                                    style={{ width: `${percent}%` }}
+                                                ></div>
                                             </div>
-
-                                            {/* 지출 목록 */}
-                                            {budget.logs.length > 0 && (
-                                                <div className="bg-white/60 rounded-lg p-3 border border-blue-100/50">
-                                                    <ul className="space-y-2">
-                                                        {budget.logs.map((log) => (
-                                                            <li key={log.id} className="flex justify-between items-center text-xs text-gray-600 group">
-                                                                <div className="flex-1 truncate mr-2">
-                                                                    <span className="font-medium text-gray-700">
-                                                                        {log.desc}
-                                                                    </span>
-                                                                </div>
-                                                                <div className="flex items-center gap-2">
-                                                                    <span className="font-bold">
-                                                                        -{formatMoney(log.amount)}
-                                                                    </span>
-                                                                    
-                                                                    <div className="flex items-center gap-1 opacity-100 sm:opacity-0 group-hover:opacity-100 transition-opacity">
-                                                                        <button 
-                                                                            onClick={() => openEditLogModal(budget.id, log)}
-                                                                            className="p-1 bg-gray-100 rounded hover:bg-blue-100 text-gray-500 hover:text-blue-600"
-                                                                            title="수정"
-                                                                        >
-                                                                            <PencilIcon className="w-3 h-3" />
-                                                                        </button>
-                                                                        <button 
-                                                                            onClick={() => deleteLog(budget.id, log.id)}
-                                                                            className="p-1 bg-gray-100 rounded hover:bg-red-100 text-gray-500 hover:text-red-600"
-                                                                            title="삭제"
-                                                                        >
-                                                                            <XIcon className="w-3 h-3" />
-                                                                        </button>
-                                                                    </div>
-                                                                </div>
-                                                            </li>
-                                                        ))}
-                                                    </ul>
-                                                </div>
-                                            )}
                                         </div>
-                                    );
-                                })
-                            )}
-                        </div>
+
+                                        {/* 입력 폼 (모바일 키패드 최적화) */}
+                                        <div className="flex gap-2 mb-4">
+                                            <input
+                                                type="text"
+                                                placeholder="내용"
+                                                className="flex-1 min-w-0 p-2 text-sm bg-white border border-transparent rounded-lg focus:border-blue-500 outline-none transition-colors shadow-sm"
+                                                value={expenseInputs[budget.id]?.desc || ''}
+                                                onChange={(e) => handleExpenseInputChange(budget.id, 'desc', e.target.value)}
+                                            />
+                                            <input
+                                                type="number"
+                                                inputMode="numeric"
+                                                placeholder="금액"
+                                                className="flex-1 min-w-0 p-2 text-sm bg-white border border-transparent rounded-lg focus:border-blue-500 outline-none transition-colors shadow-sm text-right"
+                                                value={expenseInputs[budget.id]?.amount || ''}
+                                                onChange={(e) => handleExpenseInputChange(budget.id, 'amount', e.target.value)}
+                                                onKeyDown={(e) => e.key === 'Enter' && addExpense(budget.id)}
+                                            />
+                                            <button 
+                                                onClick={() => addExpense(budget.id)}
+                                                className="bg-blue-600 text-white px-3 py-2 rounded-lg text-sm font-bold shrink-0 shadow-sm hover:bg-blue-700"
+                                            >
+                                                입력
+                                            </button>
+                                        </div>
+
+                                        {/* 지출 목록 */}
+                                        {budget.logs.length > 0 && (
+                                            <div className="bg-white/60 rounded-lg p-3 border border-blue-100/50">
+                                                <ul className="space-y-2">
+                                                    {budget.logs.map((log) => (
+                                                        <li key={log.id} className="flex justify-between items-center text-xs text-gray-600 group">
+                                                            <div className="flex items-center gap-3 overflow-hidden flex-1 mr-2">
+                                                                {/* 날짜 시간 표시 */}
+                                                                <span className="text-[10px] text-gray-400 font-medium tabular-nums shrink-0 leading-tight">
+                                                                    {log.date && log.date.includes('/') ? log.date : (log.date || '').substring(5)}
+                                                                </span>
+                                                                <span className="font-medium text-gray-700 truncate">
+                                                                    {log.desc}
+                                                                </span>
+                                                            </div>
+                                                            <div className="flex items-center gap-2 shrink-0">
+                                                                <span className="font-bold">
+                                                                    -{formatMoney(log.amount)}
+                                                                </span>
+                                                                <div className="flex items-center gap-1 opacity-100 sm:opacity-0 group-hover:opacity-100 transition-opacity">
+                                                                    <button onClick={() => openEditLogModal(budget.id, log)} className="p-1 bg-gray-100 rounded hover:bg-blue-100 text-gray-500 hover:text-blue-600">
+                                                                        <PencilIcon className="w-3 h-3" />
+                                                                    </button>
+                                                                    <button onClick={() => deleteLog(budget.id, log.id)} className="p-1 bg-gray-100 rounded hover:bg-red-100 text-gray-500 hover:text-red-600">
+                                                                        <XIcon className="w-3 h-3" />
+                                                                    </button>
+                                                                </div>
+                                                            </div>
+                                                        </li>
+                                                    ))}
+                                                </ul>
+                                            </div>
+                                        )}
+                                    </div>
+                                );
+                            })
+                        )}
                     </div>
 
-                    {/* FAB (예산 추가 버튼) */}
-                    <button
-                        onClick={() => setIsModalOpen(true)}
-                        className="fixed bottom-6 right-6 w-14 h-14 bg-blue-600 text-white rounded-full shadow-lg flex items-center justify-center hover:bg-blue-700 transition-transform hover:scale-105 active:scale-95 z-40 border-2 border-white"
-                    >
-                        <PlusIcon className="w-8 h-8" />
-                    </button>
-
-                    {/* 예산 추가 모달 */}
-                    {isModalOpen && (
-                        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4 backdrop-blur-sm animate-fade-in">
-                            <div className="bg-white rounded-2xl p-6 w-full max-w-sm shadow-xl border border-gray-100">
-                                <div className="flex justify-between items-center mb-6">
-                                    <h2 className="text-xl font-bold text-gray-800">새 예산 추가</h2>
-                                    <button onClick={() => setIsModalOpen(false)} className="text-gray-400 hover:text-gray-600">
-                                        <XIcon className="w-6 h-6" />
-                                    </button>
-                                </div>
-                                
-                                <form onSubmit={handleAddBudget} className="space-y-4">
-                                    <div>
-                                        <label className="block text-sm font-medium text-gray-600 mb-1">예산 이름</label>
-                                        <input
-                                            type="text"
-                                            placeholder="예: 이번달 식비"
-                                            autoFocus
-                                            className="w-full p-3 bg-blue-50 border border-blue-100 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500"
-                                            value={newBudgetName}
-                                            onChange={(e) => setNewBudgetName(e.target.value)}
-                                        />
+                    {/* 모달 래퍼 */}
+                    {(isModalOpen || isCalcOpen || (isEditModalOpen && editingLog)) && (
+                        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-fade-in">
+                            
+                            {/* 예산 추가 모달 */}
+                            {isModalOpen && (
+                                <div className="bg-white rounded-2xl p-6 w-full max-w-sm shadow-xl border border-gray-100 animate-slide-up">
+                                    <div className="flex justify-between items-center mb-6">
+                                        <h2 className="text-xl font-bold text-gray-800">새 예산 추가</h2>
+                                        <button onClick={() => setIsModalOpen(false)} className="text-gray-400 hover:text-gray-600">
+                                            <XIcon className="w-6 h-6" />
+                                        </button>
                                     </div>
-                                    <div>
-                                        <label className="block text-sm font-medium text-gray-600 mb-1">총 금액</label>
-                                        <input
-                                            type="number"
-                                            placeholder="0"
-                                            className="w-full p-3 bg-blue-50 border border-blue-100 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500"
-                                            value={newBudgetAmount}
-                                            onChange={(e) => setNewBudgetAmount(e.target.value)}
-                                        />
-                                        <div className="flex gap-2 mt-2">
-                                            {[10000, 50000, 100000].map(amt => (
-                                                <button
-                                                    key={amt}
-                                                    type="button"
-                                                    onClick={() => addAmountToInput(amt)}
-                                                    className="flex-1 py-2 bg-gray-50 text-gray-600 text-sm font-medium rounded-lg hover:bg-gray-100 border border-gray-200"
-                                                >
-                                                    +{amt/10000}만
-                                                </button>
-                                            ))}
+                                    <form onSubmit={handleAddBudget} className="space-y-4">
+                                        <div>
+                                            <label className="block text-sm font-medium text-gray-600 mb-1">예산 이름</label>
+                                            <input type="text" autoFocus placeholder="예: 이번달 식비" className="w-full p-3 bg-blue-50 border border-blue-100 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500" value={newBudgetName} onChange={(e) => setNewBudgetName(e.target.value)} />
                                         </div>
-                                    </div>
-                                    <button 
-                                        type="submit"
-                                        className="w-full bg-blue-600 text-white py-4 rounded-xl font-bold text-lg hover:bg-blue-700 mt-4 shadow-lg shadow-blue-200"
-                                    >
-                                        완료
-                                    </button>
-                                </form>
-                            </div>
-                        </div>
-                    )}
-
-                    {/* 지출 수정 모달 */}
-                    {isEditModalOpen && editingLog && (
-                        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4 backdrop-blur-sm">
-                            <div className="bg-white rounded-2xl p-6 w-full max-w-sm shadow-xl border border-gray-100">
-                                <div className="flex justify-between items-center mb-6">
-                                    <h2 className="text-xl font-bold text-gray-800">지출 내역 수정</h2>
-                                    <button onClick={() => { setIsEditModalOpen(false); setEditingLog(null); }} className="text-gray-400 hover:text-gray-600">
-                                        <XIcon className="w-6 h-6" />
-                                    </button>
+                                        <div>
+                                            <label className="block text-sm font-medium text-gray-600 mb-1">총 금액</label>
+                                            <input type="number" inputMode="numeric" placeholder="0" className="w-full p-3 bg-blue-50 border border-blue-100 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500" value={newBudgetAmount} onChange={(e) => setNewBudgetAmount(e.target.value)} />
+                                            <div className="flex gap-2 mt-2">
+                                                {[10000, 50000, 100000].map(amt => (
+                                                    <button key={amt} type="button" onClick={() => addAmountToInput(amt)} className="flex-1 py-2 bg-gray-50 text-gray-600 text-sm font-medium rounded-lg hover:bg-gray-100 border border-gray-200">+{amt/10000}만</button>
+                                                ))}
+                                            </div>
+                                        </div>
+                                        <button type="submit" className="w-full bg-blue-600 text-white py-4 rounded-xl font-bold text-lg hover:bg-blue-700 mt-4 shadow-lg shadow-blue-200">완료</button>
+                                    </form>
                                 </div>
-                                
-                                <form onSubmit={handleUpdateLog} className="space-y-4">
-                                    <div>
-                                        <label className="block text-sm font-medium text-gray-600 mb-1">내용</label>
-                                        <input
-                                            type="text"
-                                            className="w-full p-3 bg-blue-50 border border-blue-100 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500"
-                                            value={editingLog.desc}
-                                            onChange={(e) => setEditingLog({...editingLog, desc: e.target.value})}
-                                        />
+                            )}
+
+                            {/* 일반 계산기 팝업 */}
+                            {isCalcOpen && (
+                                <div className="bg-white rounded-2xl p-6 w-full max-w-sm shadow-xl border border-gray-100 animate-slide-up">
+                                    <div className="flex justify-between items-center mb-4">
+                                        <h2 className="text-xl font-bold text-gray-800">계산기</h2>
+                                        <button onClick={() => setIsCalcOpen(false)} className="text-gray-400 hover:text-gray-600">
+                                            <XIcon className="w-6 h-6" />
+                                        </button>
                                     </div>
-                                    <div>
-                                        <label className="block text-sm font-medium text-gray-600 mb-1">금액</label>
-                                        <input
-                                            type="number"
-                                            className="w-full p-3 bg-blue-50 border border-blue-100 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500"
-                                            value={editingLog.amount}
-                                            onChange={(e) => setEditingLog({...editingLog, amount: e.target.value})}
-                                        />
+                                    <StandardCalculator />
+                                </div>
+                            )}
+
+                            {/* 지출 수정 모달 */}
+                            {isEditModalOpen && editingLog && (
+                                <div className="bg-white rounded-2xl p-6 w-full max-w-sm shadow-xl border border-gray-100 animate-slide-up">
+                                    <div className="flex justify-between items-center mb-6">
+                                        <h2 className="text-xl font-bold text-gray-800">지출 내역 수정</h2>
+                                        <button onClick={() => { setIsEditModalOpen(false); setEditingLog(null); }} className="text-gray-400 hover:text-gray-600">
+                                            <XIcon className="w-6 h-6" />
+                                        </button>
                                     </div>
-                                    <button 
-                                        type="submit"
-                                        className="w-full bg-blue-600 text-white py-4 rounded-xl font-bold text-lg hover:bg-blue-700 mt-4 shadow-lg shadow-blue-200"
-                                    >
-                                        수정 완료
-                                    </button>
-                                </form>
-                            </div>
+                                    <form onSubmit={handleUpdateLog} className="space-y-4">
+                                        <div>
+                                            <label className="block text-sm font-medium text-gray-600 mb-1">내용</label>
+                                            <input type="text" className="w-full p-3 bg-blue-50 border border-blue-100 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500" value={editingLog.desc} onChange={(e) => setEditingLog({...editingLog, desc: e.target.value})} />
+                                        </div>
+                                        <div>
+                                            <label className="block text-sm font-medium text-gray-600 mb-1">금액</label>
+                                            <input type="number" inputMode="numeric" className="w-full p-3 bg-blue-50 border border-blue-100 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500" value={editingLog.amount} onChange={(e) => setEditingLog({...editingLog, amount: e.target.value})} />
+                                        </div>
+                                        <button type="submit" className="w-full bg-blue-600 text-white py-4 rounded-xl font-bold text-lg hover:bg-blue-700 mt-4 shadow-lg shadow-blue-200">수정 완료</button>
+                                    </form>
+                                </div>
+                            )}
+
                         </div>
                     )}
-
                 </div>
             );
         }
