@@ -2,459 +2,747 @@
 <html lang="ko">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes">
-    <title>사진기록</title>
-    
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>결정적 소비</title>
+    <!-- React 및 ReactDOM CDN -->
     <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
     <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
-    
+    <!-- Babel (JSX 변환용) -->
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
-    
+    <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
-    
+    <!-- 폰트 -->
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700;900&display=swap" rel="stylesheet">
     <style>
-        .scrollbar-hide::-webkit-scrollbar {
+        body { font-family: 'Noto Sans KR', sans-serif; -webkit-tap-highlight-color: transparent; }
+        .animate-fade-in { animation: fadeIn 0.2s ease-out; }
+        .animate-slide-up { animation: slideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1); }
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+        @keyframes slideUp { from { transform: translateY(20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+        
+        /* 숫자 입력 화살표 제거 */
+        input[type=number]::-webkit-inner-spin-button, 
+        input[type=number]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
+
+        /* 토글 스위치 스타일 */
+        .toggle-checkbox:checked {
+            right: 0;
+            border-color: #2563eb;
+        }
+        .toggle-checkbox:checked + .toggle-label {
+            background-color: #2563eb;
+        }
+        
+        /* 모달 등에서 가로 스크롤 방지 */
+        .no-scrollbar::-webkit-scrollbar {
             display: none;
         }
-        .scrollbar-hide {
+        .no-scrollbar {
             -ms-overflow-style: none;
             scrollbar-width: none;
         }
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
-            touch-action: manipulation; 
-            background-color: #f8fafc; /* 조금 더 밝고 깨끗한 배경색 */
-        }
     </style>
 </head>
-<body class="bg-slate-50">
+<body class="bg-white text-gray-900 select-none overflow-x-hidden">
     <div id="root"></div>
 
     <script type="text/babel">
-        const { useState, useEffect, useRef } = React;
+        const { useState, useEffect } = React;
 
-        // --- [핵심] IndexedDB 관리 함수 ---
-        const DB_NAME = 'PhotoLogDB';
-        const STORE_NAME = 'photos';
-        const DB_VERSION = 1;
+        // --- 아이콘 컴포넌트 ---
+        const WalletIcon = ({ className }) => (
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="M21 12V7H5a2 2 0 0 1 0-4h14v4"/><path d="M3 5v14a2 2 0 0 0 2 2h16v-5"/><path d="M18 12a2 2 0 0 0 0 4h4v-4Z"/></svg>
+        );
+        const TrashIcon = ({ className }) => (
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/><line x1="10" x2="10" y1="11" y2="17"/><line x1="14" x2="14" y1="11" y2="17"/></svg>
+        );
+        const XIcon = ({ className }) => (
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+        );
+        const PencilIcon = ({ className }) => (
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/><path d="m15 5 4 4"/></svg>
+        );
+        const ArrowUpIcon = ({ className }) => (
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="m18 15-6-6-6 6"/></svg>
+        );
+        const ArrowDownIcon = ({ className }) => (
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="m6 9 6 6 6-6"/></svg>
+        );
+        const ExchangeIcon = ({ className }) => (
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="M8 3 4 7l4 4"/><path d="M4 7h16"/><path d="m16 21 4-4-4-4"/><path d="M20 17H4"/></svg>
+        );
+        const CheckIcon = ({ className }) => (
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="M20 6 9 17l-5-5"/></svg>
+        );
+        const CalculatorIcon = ({ className }) => (
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><rect x="4" y="2" width="16" height="20" rx="2" /><line x1="8" x2="16" y1="6" y2="6" /><line x1="16" x2="16" y1="14" y2="18" /><path d="M16 10h.01" /><path d="M12 10h.01" /><path d="M8 10h.01" /><path d="M12 14h.01" /><path d="M8 14h.01" /><path d="M12 18h.01" /><path d="M8 18h.01" /></svg>
+        );
+        const MenuIcon = ({ className }) => (
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><line x1="3" x2="21" y1="6" y2="6"/><line x1="3" x2="21" y1="12" y2="12"/><line x1="3" x2="21" y1="18" y2="18"/></svg>
+        );
+        // 심플한 파란색 체크박스 아이콘
+        const SimpleCheckIcon = ({ className }) => (
+             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className={className}>
+                <rect x="3" y="3" width="18" height="18" rx="4" className="text-blue-600" />
+                <path d="M8 12L11 15L16 9" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+        );
 
-        const initDB = () => {
-            return new Promise((resolve, reject) => {
-                const request = indexedDB.open(DB_NAME, DB_VERSION);
-                request.onerror = (event) => reject("Database error: " + event.target.errorCode);
-                request.onupgradeneeded = (event) => {
-                    const db = event.target.result;
-                    if (!db.objectStoreNames.contains(STORE_NAME)) {
-                        db.createObjectStore(STORE_NAME, { keyPath: "date" });
-                    }
-                };
-                request.onsuccess = (event) => resolve(event.target.result);
-            });
-        };
+        // --- 지원 통화 목록 ---
+        const CURRENCIES = [
+            { code: 'USD', label: '🇺🇸 미국 (USD)', symbol: '$' },
+            { code: 'JPY', label: '🇯🇵 일본 (JPY)', symbol: '엔' },
+            { code: 'EUR', label: '🇪🇺 유로 (EUR)', symbol: '€' },
+            { code: 'CNY', label: '🇨🇳 중국 (CNY)', symbol: '위안' },
+            { code: 'THB', label: '🇹🇭 태국 (THB)', symbol: '฿' },
+            { code: 'VND', label: '🇻🇳 베트남 (VND)', symbol: '₫' },
+            { code: 'PHP', label: '🇵🇭 필리핀 (PHP)', symbol: '₱' },
+            { code: 'HKD', label: '🇭🇰 홍콩 (HKD)', symbol: '$' },
+            { code: 'TWD', label: '🇹🇼 대만 (TWD)', symbol: 'NT$' },
+            { code: 'IDR', label: '🇮🇩 인도네시아 (IDR)', symbol: 'Rp' },
+            { code: 'MYR', label: '🇲🇾 말레이시아 (MYR)', symbol: 'RM' },
+            { code: 'SGD', label: '🇸🇬 싱가포르 (SGD)', symbol: '$' },
+            { code: 'AUD', label: '🇦🇺 호주 (AUD)', symbol: '$' },
+            { code: 'CAD', label: '🇨🇦 캐나다 (CAD)', symbol: '$' },
+            { code: 'CHF', label: '🇨🇭 스위스 (CHF)', symbol: 'Fr' },
+            { code: 'GBP', label: '🇬🇧 영국 (GBP)', symbol: '£' },
+            { code: 'TRY', label: '🇹🇷 튀르키예 (TRY)', symbol: '₺' },
+        ];
 
-        const saveToDB = async (dateKey, imageData) => {
-            const db = await initDB();
-            return new Promise((resolve, reject) => {
-                const transaction = db.transaction([STORE_NAME], "readwrite");
-                const store = transaction.objectStore(STORE_NAME);
-                const request = store.put({ date: dateKey, image: imageData });
-                request.onsuccess = () => resolve(true);
-                request.onerror = () => reject("Save failed");
-            });
-        };
-
-        const loadFromDB = async () => {
-            const db = await initDB();
-            return new Promise((resolve, reject) => {
-                const transaction = db.transaction([STORE_NAME], "readonly");
-                const store = transaction.objectStore(STORE_NAME);
-                const request = store.getAll();
-                request.onsuccess = () => {
-                    const photosObj = {};
-                    request.result.forEach(item => {
-                        photosObj[item.date] = item.image;
-                    });
-                    resolve(photosObj);
-                };
-                request.onerror = () => reject("Load failed");
-            });
-        };
-
-        const deleteFromDB = async (dateKey) => {
-            const db = await initDB();
-            return new Promise((resolve, reject) => {
-                const transaction = db.transaction([STORE_NAME], "readwrite");
-                const store = transaction.objectStore(STORE_NAME);
-                const request = store.delete(dateKey);
-                request.onsuccess = () => resolve(true);
-                request.onerror = () => reject("Delete failed");
-            });
-        };
-
-        // --- 이미지 압축 유틸리티 ---
-        const compressImage = (file, maxWidth = 1920, quality = 0.9) => {
-            return new Promise((resolve) => {
-                const reader = new FileReader();
-                reader.readAsDataURL(file);
-                reader.onload = (event) => {
-                    const img = new Image();
-                    img.src = event.target.result;
-                    img.onload = () => {
-                        const canvas = document.createElement('canvas');
-                        let width = img.width;
-                        let height = img.height;
-
-                        if (width > maxWidth) {
-                            height = (maxWidth / width) * height;
-                            width = maxWidth;
-                        }
-
-                        canvas.width = width;
-                        canvas.height = height;
-                        const ctx = canvas.getContext('2d');
-                        ctx.drawImage(img, 0, 0, width, height);
-                        resolve(canvas.toDataURL('image/jpeg', quality));
-                    };
-                };
-            });
-        };
-
-        // --- 유틸리티 함수 ---
-        const generateCalendar = (year, month) => {
-            const startDay = new Date(year, month, 1).getDay();
-            const daysInMonth = new Date(year, month + 1, 0).getDate();
-            const calendar = [];
-            let week = Array(startDay).fill(null);
-
-            for (let day = 1; day <= daysInMonth; day++) {
-                week.push(day);
-                if (week.length === 7) {
-                    calendar.push(week);
-                    week = [];
-                }
-            }
-            if (week.length > 0) {
-                while (week.length < 7) week.push(null);
-                calendar.push(week);
-            }
-            return calendar;
-        };
-
-        const formatDateKey = (year, month, day) => {
-            if (!day) return null;
-            return `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
-        };
-
-        // --- 메인 컴포넌트 ---
-        function App() {
-            const [currentDate, setCurrentDate] = useState(new Date());
-            const [selectedDate, setSelectedDate] = useState(new Date().getDate());
-            const [photos, setPhotos] = useState({}); 
-            const [viewMode, setViewMode] = useState('calendar'); 
-            const [compareMode, setCompareMode] = useState('gallery'); 
-            const [splitSelection, setSplitSelection] = useState([null, null]); 
-            const [loading, setLoading] = useState(true);
-            
-            const scrollRef = useRef(null);
-
-            const today = new Date();
-            const isToday = (day) => {
-                return day === today.getDate() && 
-                    currentDate.getMonth() === today.getMonth() && 
-                    currentDate.getFullYear() === today.getFullYear();
-            };
+        // --- 환율 계산기 컴포넌트 ---
+        const CurrencyConverter = ({ isVisible, foreignCurrency }) => {
+            const [amountKrw, setAmountKrw] = useState('');
+            const [amountForeign, setAmountForeign] = useState('');
+            const [rate, setRate] = useState(null);
+            const [loading, setLoading] = useState(false);
 
             useEffect(() => {
-                const loadData = async () => {
-                    try {
-                        const savedPhotos = await loadFromDB();
-                        setPhotos(savedPhotos);
-                    } catch (e) {
-                        console.error("데이터베이스 로드 실패", e);
-                    } finally {
+                if (!isVisible) return;
+                setLoading(true);
+                fetch(`https://api.frankfurter.app/latest?from=${foreignCurrency}&to=KRW`)
+                    .then(res => res.json())
+                    .then(data => {
+                        setRate(data.rates.KRW);
                         setLoading(false);
-                    }
-                };
-                loadData();
-            }, []);
+                    })
+                    .catch(err => {
+                        console.error("환율 로드 실패", err);
+                        setRate(null); 
+                        setLoading(false);
+                    });
+            }, [foreignCurrency, isVisible]);
 
-            useEffect(() => {
-                if (viewMode === 'compare' && compareMode === 'gallery' && scrollRef.current) {
-                    setTimeout(() => {
-                        if (scrollRef.current) {
-                            scrollRef.current.scrollLeft = scrollRef.current.scrollWidth;
-                        }
-                    }, 0);
-                }
-            }, [viewMode, compareMode]);
+            const getSymbol = (code) => CURRENCIES.find(c => c.code === code)?.symbol || code;
 
-            const handlePhotoUpload = async (e) => {
-                const file = e.target.files[0];
-                if (!file || !selectedDate) return;
-
-                try {
-                    const compressedDataUrl = await compressImage(file);
-                    const dateKey = formatDateKey(currentDate.getFullYear(), currentDate.getMonth(), selectedDate);
-                    await saveToDB(dateKey, compressedDataUrl);
-                    setPhotos(prev => ({ ...prev, [dateKey]: compressedDataUrl }));
-                } catch (error) {
-                    alert("사진 저장 중 오류가 발생했습니다: " + error);
+            const handleKrwChange = (e) => {
+                const val = e.target.value;
+                setAmountKrw(val);
+                if (val && rate) {
+                    setAmountForeign((parseFloat(val) / rate).toFixed(2));
+                } else {
+                    setAmountForeign('');
                 }
             };
 
-            const handleDeletePhoto = async () => {
-                if (!selectedDate) return;
-                const dateKey = formatDateKey(currentDate.getFullYear(), currentDate.getMonth(), selectedDate);
-                try {
-                    await deleteFromDB(dateKey);
-                    const newPhotos = { ...photos };
-                    delete newPhotos[dateKey];
-                    setPhotos(newPhotos);
-                } catch (error) {
-                    console.error("삭제 실패", error);
+            const handleForeignChange = (e) => {
+                const val = e.target.value;
+                setAmountForeign(val);
+                if (val && rate) {
+                    setAmountKrw((parseFloat(val) * rate).toFixed(0));
+                } else {
+                    setAmountKrw('');
                 }
             };
 
-            const prevMonth = () => setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() - 1, 1));
-            const nextMonth = () => setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 1));
+            if (!isVisible) return null;
 
-            const year = currentDate.getFullYear();
-            const month = currentDate.getMonth();
-            const calendarData = generateCalendar(year, month);
-            const selectedDateKey = formatDateKey(year, month, selectedDate);
-            const hasPhotoToday = selectedDate && photos[selectedDateKey];
-            const sortedPhotoDates = Object.keys(photos).sort();
-            
-            const gallerySortedDates = sortedPhotoDates; 
-
-            // 상단 버튼 공통 스타일 (아이콘 참조: 연한 파랑 배경, 진한 파랑 글씨)
-            const headerButtonStyle = "text-sm font-bold text-indigo-600 bg-indigo-50 px-6 py-2.5 rounded-full active:bg-indigo-100 transition-colors shadow-sm hover:bg-indigo-100 border border-indigo-100";
-
-            if (loading) return <div className="h-screen flex items-center justify-center font-bold text-gray-400">데이터 로딩 중...</div>;
+            const getRateDisplay = () => {
+                if (!rate) return "환율 정보 없음";
+                if (['JPY', 'VND', 'IDR'].includes(foreignCurrency) || rate < 10) {
+                    return `100 ${getSymbol(foreignCurrency)} = ${(rate * 100).toFixed(2)} 원`;
+                }
+                return `1 ${getSymbol(foreignCurrency)} = ${rate.toFixed(2)} 원`;
+            };
 
             return (
-                <div className="flex flex-col h-screen bg-slate-50 text-gray-800 font-sans overflow-hidden">
-                
-                {/* 헤더 */}
-                <header className="flex items-center justify-between px-5 py-4 bg-white border-b border-gray-100 z-20 shrink-0 select-none shadow-sm">
-                    <h1 className="text-xl font-extrabold text-gray-900 tracking-tight flex items-center gap-2">
-                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor" className="w-6 h-6 text-indigo-600">
-                            <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" />
-                        </svg>
-                        사진기록
-                    </h1>
-                    {viewMode === 'calendar' && (
-                    <button 
-                        onClick={() => setViewMode('compare')}
-                        className={headerButtonStyle}
-                    >
-                        비교하기
-                    </button>
-                    )}
-                    {viewMode === 'compare' && (
-                    <button 
-                        onClick={() => setViewMode('calendar')}
-                        className={headerButtonStyle}
-                    >
-                        달력보기
-                    </button>
-                    )}
-                </header>
-
-                <main className="flex-1 overflow-y-auto scroll-smooth">
-                    
-                    {/* 달력 모드 */}
-                    {viewMode === 'calendar' && (
-                    <div className="flex flex-col min-h-full pb-10">
-                        {/* 달력 박스 */}
-                        <div className="px-4 py-4 z-10">
-                            <div className="bg-white rounded-[2rem] border border-gray-100 shadow-md p-4 pb-6">
-                                <div className="flex items-center justify-center gap-8 py-2 select-none mb-2">
-                                    <button onClick={prevMonth} className="text-gray-400 hover:text-indigo-600 font-bold text-2xl p-2 transition-colors">&lt;</button>
-                                    <span className="text-xl font-extrabold text-gray-900">{year}년 {month + 1}월</span>
-                                    <button onClick={nextMonth} className="text-gray-400 hover:text-indigo-600 font-bold text-2xl p-2 transition-colors">&gt;</button>
-                                </div>
-                                
-                                <div className="grid grid-cols-7 text-center mb-3 text-sm font-bold select-none text-gray-400">
-                                    {['일', '월', '화', '수', '목', '금', '토'].map((day, idx) => (
-                                        <div key={day} className={`py-1 ${idx === 0 ? 'text-rose-500' : idx === 6 ? 'text-indigo-500' : ''}`}>
-                                            {day}
-                                        </div>
-                                    ))}
-                                </div>
-                                
-                                <div className="w-full">
-                                    {calendarData.map((week, i) => (
-                                    <div key={i} className="grid grid-cols-7 mb-2 gap-y-1">
-                                        {week.map((day, j) => {
-                                        const dateKey = formatDateKey(year, month, day);
-                                        const isPhoto = dateKey && photos[dateKey];
-                                        const isSelected = day === selectedDate;
-                                        const isTodayDate = day && isToday(day);
-                                        
-                                        let textColor = 'text-gray-700';
-                                        if (j === 0) textColor = 'text-rose-500'; 
-                                        else if (j === 6) textColor = 'text-indigo-500'; 
-
-                                        return (
-                                            <div key={j} className="flex flex-col items-center justify-center h-10 sm:h-12 relative">
-                                            {day && (
-                                                <button onClick={() => setSelectedDate(day)} className="w-full h-full flex items-center justify-center relative group">
-                                                <div className={`
-                                                    w-9 h-9 sm:w-10 sm:h-10 flex items-center justify-center rounded-full text-base font-bold transition-all relative z-10 
-                                                    ${isTodayDate 
-                                                        ? 'bg-indigo-600 text-white shadow-md'  // 오늘 날짜 색상 변경 (진한 파랑)
-                                                        : isPhoto 
-                                                            ? 'bg-indigo-400 text-white' // 기록 있음 색상 변경 (중간 파랑)
-                                                            : textColor
-                                                    } 
-                                                    ${isSelected && !isTodayDate && !isPhoto ? 'bg-indigo-50 ring-1 ring-indigo-200 text-indigo-700' : ''} 
-                                                    ${isSelected && (isTodayDate || isPhoto) ? 'ring-2 ring-offset-2 ring-indigo-300 scale-110' : ''}
-                                                `}>
-                                                    {day}
-                                                </div>
-                                                {isTodayDate && <span className="absolute -bottom-1 text-[10px] text-indigo-600 font-extrabold z-20 bg-white px-1.5 rounded-full leading-none shadow-sm">오늘</span>}
-                                                </button>
-                                            )}
-                                            </div>
-                                        );
-                                        })}
-                                    </div>
-                                    ))}
-                                </div>
-                            </div>
+                <div className="bg-blue-50 rounded-2xl border border-blue-100 p-4 mb-6 shadow-sm animate-fade-in w-full max-w-full overflow-hidden">
+                    <div className="flex items-center justify-between gap-2">
+                        <div className="flex-1 relative min-w-0">
+                            <input 
+                                type="number" inputMode="numeric"
+                                value={amountKrw} onChange={handleKrwChange} placeholder="0"
+                                className="w-full text-right pr-8 pl-2 py-2 bg-white rounded-xl border border-blue-100 focus:outline-none focus:border-blue-400 text-gray-800 text-lg font-bold min-w-0"
+                            />
+                            <span className="absolute right-3 top-2.5 text-sm font-bold text-gray-500 pointer-events-none">원</span>
                         </div>
-
-                        <div className="flex-1 bg-slate-50 p-0">
-                        {selectedDate ? (
-                            <div className="flex flex-col w-full min-h-[50vh]">
-                                <div className="px-6 py-3 flex justify-between items-center">
-                                    <h3 className="text-lg font-extrabold text-gray-900">{month + 1}월 {selectedDate}일</h3>
-                                </div>
-                                {hasPhotoToday ? (
-                                    <div className="flex flex-col gap-4 px-4">
-                                        <div className="w-full bg-white rounded-[2rem] overflow-hidden shadow-md border border-gray-100 relative">
-                                            <img src={photos[selectedDateKey]} alt="기록" className="w-full h-auto max-h-[60vh] object-contain block bg-gray-50" />
-                                        </div>
-                                        <div className="flex gap-3 shrink-0 py-2">
-                                            <label className="flex-1 bg-white border-2 border-indigo-100 text-indigo-600 py-3.5 rounded-2xl font-bold text-sm flex items-center justify-center cursor-pointer active:bg-indigo-50 transition-colors shadow-sm hover:border-indigo-200">
-                                                사진 교체
-                                                <input type="file" accept="image/*" className="hidden" onChange={handlePhotoUpload} />
-                                            </label>
-                                            <button onClick={handleDeletePhoto} className="flex-1 bg-white border-2 border-rose-100 text-rose-500 py-3.5 rounded-2xl font-bold text-sm flex items-center justify-center active:bg-rose-50 transition-colors shadow-sm hover:border-rose-200">삭제</button>
-                                        </div>
-                                    </div>
-                                ) : (
-                                    <div className="flex flex-col justify-start gap-4 py-2 px-6">
-                                        <div className="grid grid-cols-2 gap-4 mt-2">
-                                            {/* [수정] 하단 버튼: 배경 진한 파랑(아이콘색), 글자 흰색, 폰트 매우 크게 */}
-                                            <label className="flex flex-col items-center justify-center gap-2 bg-indigo-600 hover:bg-indigo-700 active:bg-indigo-800 rounded-[2rem] p-6 cursor-pointer transition-all shadow-lg h-32 sm:h-36">
-                                                <div className="font-extrabold text-white text-3xl">촬영</div>
-                                                <div className="text-indigo-200 text-sm font-medium">Camera</div>
-                                                <input type="file" accept="image/*" capture="environment" className="hidden" onChange={handlePhotoUpload} />
-                                            </label>
-                                            <label className="flex flex-col items-center justify-center gap-2 bg-indigo-600 hover:bg-indigo-700 active:bg-indigo-800 rounded-[2rem] p-6 cursor-pointer transition-all shadow-lg h-32 sm:h-36">
-                                                <div className="font-extrabold text-white text-3xl">앨범</div>
-                                                <div className="text-indigo-200 text-sm font-medium">Gallery</div>
-                                                <input type="file" accept="image/*" className="hidden" onChange={handlePhotoUpload} />
-                                            </label>
-                                        </div>
-                                    </div>
-                                )}
-                            </div>
-                        ) : (
-                            <div className="h-40 flex flex-col items-center justify-center text-gray-400 font-medium">날짜를 선택해주세요</div>
-                        )}
+                        <div className="text-blue-400 shrink-0 px-1">
+                            <ExchangeIcon className="w-5 h-5" />
+                        </div>
+                        <div className="flex-1 relative min-w-0">
+                            <input 
+                                type="number" inputMode="numeric"
+                                value={amountForeign} onChange={handleForeignChange} placeholder="0"
+                                className="w-full text-right pr-8 pl-2 py-2 bg-white rounded-xl border border-blue-100 focus:outline-none focus:border-blue-400 text-gray-800 text-lg font-bold min-w-0"
+                            />
+                            <span className="absolute right-3 top-2.5 text-sm font-bold text-gray-500 pointer-events-none">{getSymbol(foreignCurrency)}</span>
                         </div>
                     </div>
-                    )}
-
-                    {/* 비교 모드 */}
-                    {viewMode === 'compare' && (
-                    <div className="flex flex-col min-h-full bg-slate-50 pb-10">
-                        <div className="flex p-3 bg-white border-b border-gray-100 z-10 sticky top-0 shrink-0 gap-2 shadow-sm">
-                        {/* 비교 모드 토글 버튼도 테마에 맞게 변경 */}
-                        <button onClick={() => setCompareMode('gallery')} className={`flex-1 py-3 text-sm font-bold rounded-2xl transition-all ${compareMode === 'gallery' ? 'bg-indigo-600 text-white shadow-md' : 'bg-gray-100 text-gray-500 hover:bg-gray-200'}`}>슬라이드 뷰</button>
-                        <button onClick={() => setCompareMode('split')} className={`flex-1 py-3 text-sm font-bold rounded-2xl transition-all ${compareMode === 'split' ? 'bg-indigo-600 text-white shadow-md' : 'bg-gray-100 text-gray-500 hover:bg-gray-200'}`}>1:1 비교</button>
-                        </div>
-                        {Object.keys(photos).length === 0 ? (
-                        <div className="flex-1 flex flex-col items-center justify-center text-gray-400 gap-4 min-h-[50vh]"><p className="font-bold">기록된 사진이 없습니다</p></div>
+                    <div className="text-center mt-2">
+                         {loading ? (
+                            <p className="text-xs text-gray-400">환율 로딩 중...</p>
                         ) : (
-                        <>
-                            {compareMode === 'gallery' && (
-                            <div 
-                                ref={scrollRef}
-                                /* [수정] 패딩을 줄여 좌우 여백 최소화 (p-2) */
-                                className="flex-1 overflow-x-auto flex items-center gap-4 p-2 snap-x snap-mandatory scrollbar-hide bg-slate-100 h-full"
+                            <p className="text-xs font-medium text-gray-500">
+                                <span className="text-blue-600 font-bold">{getRateDisplay()}</span>
+                            </p>
+                        )}
+                    </div>
+                </div>
+            );
+        };
+
+        // --- 일반 계산기 컴포넌트 ---
+        const StandardCalculator = () => {
+            const [display, setDisplay] = useState('0');
+            const [equation, setEquation] = useState('');
+
+            const handleBtn = (val) => {
+                if (val === 'C') {
+                    setDisplay('0');
+                    setEquation('');
+                } else if (val === '=') {
+                    try {
+                        const result = Function('"use strict";return (' + equation + display + ')')();
+                        setDisplay(String(result));
+                        setEquation('');
+                    } catch (e) {
+                        setDisplay('Error');
+                    }
+                } else if (['+', '-', '*', '/'].includes(val)) {
+                    setEquation(equation + display + val);
+                    setDisplay('0');
+                } else {
+                    if (display === '0') setDisplay(val);
+                    else setDisplay(display + val);
+                }
+            };
+
+            const buttons = [
+                '7', '8', '9', '/',
+                '4', '5', '6', '*',
+                '1', '2', '3', '-',
+                'C', '0', '=', '+'
+            ];
+
+            return (
+                <div className="w-full">
+                    <div className="bg-gray-100 rounded-xl p-4 mb-4 text-right">
+                         <div className="text-gray-400 text-xs h-4">{equation}</div>
+                         <div className="text-3xl font-bold text-gray-800 truncate">{display}</div>
+                    </div>
+                    <div className="grid grid-cols-4 gap-2">
+                        {buttons.map((btn) => (
+                            <button
+                                key={btn}
+                                onClick={() => handleBtn(btn)}
+                                className={`
+                                    p-4 rounded-xl font-bold text-lg transition-all active:scale-95
+                                    ${btn === '=' ? 'bg-blue-600 text-white col-span-1' : ''}
+                                    ${btn === 'C' ? 'bg-red-100 text-red-500' : ''}
+                                    ${['/', '*', '-', '+'].includes(btn) ? 'bg-blue-50 text-blue-600' : 'bg-gray-50 text-gray-700'}
+                                    ${!['=', 'C', '/', '*', '-', '+'].includes(btn) ? 'hover:bg-gray-100' : ''}
+                                `}
                             >
-                                {gallerySortedDates.map((date) => (
-                                /* [수정] 너비를 넓혀(w-[96vw]) 꽉 차게 보이게 함 */
-                                <div key={date} className="snap-center shrink-0 w-[96vw] h-[75vh] flex flex-col relative py-2">
-                                    <div className="flex justify-center mb-3 z-10">
-                                        <span className="text-indigo-700 font-extrabold text-base tracking-wide bg-white/90 px-4 py-1.5 rounded-full shadow-sm border border-indigo-50 backdrop-blur-md">
-                                            {date}
-                                        </span>
-                                    </div>
-                                    {/* [수정] 깊은 라운드 처리(rounded-[2.5rem]) 및 그림자 추가 */}
-                                    <div className="flex-1 w-full rounded-[2.5rem] shadow-xl overflow-hidden flex items-center justify-center bg-white relative border border-gray-100">
-                                        {/* 사진 크기 그대로 유지(object-contain)하며 라운드 프레임 안에 배치 */}
-                                        <img src={photos[date]} alt={date} className="w-full h-full object-contain" />
-                                    </div>
-                                </div>
-                                ))}
+                                {btn}
+                            </button>
+                        ))}
+                    </div>
+                </div>
+            );
+        };
+
+        // --- 메인 App 컴포넌트 ---
+        function App() {
+            // 예산 데이터
+            const [budgets, setBudgets] = useState(() => {
+                const saved = localStorage.getItem('myBudgets');
+                return saved ? JSON.parse(saved) : [];
+            });
+
+            // 설정 데이터
+            const [appSettings, setAppSettings] = useState(() => {
+                const saved = localStorage.getItem('appSettings');
+                return saved ? JSON.parse(saved) : { 
+                    showConverter: true,
+                    selectedCurrency: 'JPY'
+                };
+            });
+
+            // 모달 상태
+            const [isCalcOpen, setIsCalcOpen] = useState(false);
+            const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+            const [isMenuOpen, setIsMenuOpen] = useState(false);
+
+            // 입력 상태
+            const [newBudgetName, setNewBudgetName] = useState('');
+            const [newBudgetAmount, setNewBudgetAmount] = useState('');
+            const [editingLog, setEditingLog] = useState(null); 
+            const [expenseInputs, setExpenseInputs] = useState({});
+
+            // 예산 제목 수정 상태
+            const [editingBudgetId, setEditingBudgetId] = useState(null);
+            const [editingBudgetName, setEditingBudgetName] = useState('');
+
+            useEffect(() => {
+                localStorage.setItem('myBudgets', JSON.stringify(budgets));
+            }, [budgets]);
+
+            useEffect(() => {
+                localStorage.setItem('appSettings', JSON.stringify(appSettings));
+            }, [appSettings]);
+
+            const getFormattedDateTime = () => {
+                const now = new Date();
+                const month = now.getMonth() + 1;
+                const day = now.getDate();
+                const hours = now.getHours();
+                const minutes = now.getMinutes().toString().padStart(2, '0');
+                return `${month}/${day} ${hours}:${minutes}`;
+            };
+
+            const formatMoney = (amount) => {
+                return new Intl.NumberFormat('ko-KR', { style: 'currency', currency: 'KRW' }).format(amount);
+            };
+
+            const toggleConverter = () => {
+                setAppSettings(prev => ({ ...prev, showConverter: !prev.showConverter }));
+            };
+
+            const changeSelectedCurrency = (code) => {
+                setAppSettings(prev => ({ ...prev, selectedCurrency: code }));
+            };
+
+            const handleAddBudget = (e) => {
+                e.preventDefault();
+                if (!newBudgetName || !newBudgetAmount) return;
+
+                const newBudget = {
+                    id: Date.now() + Math.random(),
+                    name: newBudgetName,
+                    total: parseInt(newBudgetAmount),
+                    spent: 0,
+                    logs: [] 
+                };
+
+                setBudgets([...budgets, newBudget]);
+                setNewBudgetName('');
+                setNewBudgetAmount('');
+                setIsMenuOpen(false);
+            };
+
+            const deleteBudget = (id) => {
+                if (window.confirm('이 예산 항목을 통째로 삭제할까요?')) {
+                    setBudgets(prev => prev.filter(b => b.id !== id));
+                }
+            };
+
+            const moveBudget = (index, direction) => {
+                const newBudgets = [...budgets];
+                const targetIndex = index + direction;
+                if (targetIndex < 0 || targetIndex >= newBudgets.length) return;
+                const temp = newBudgets[index];
+                newBudgets[index] = newBudgets[targetIndex];
+                newBudgets[targetIndex] = temp;
+                setBudgets(newBudgets);
+            };
+
+            const addAmountToInput = (amount) => {
+                setNewBudgetAmount(prev => {
+                    const current = parseInt(prev) || 0;
+                    return (current + amount).toString();
+                });
+            };
+
+            const startEditingBudget = (budget) => {
+                setEditingBudgetId(budget.id);
+                setEditingBudgetName(budget.name);
+            };
+
+            const saveBudgetTitle = (budgetId) => {
+                if (!editingBudgetName.trim()) return;
+                setBudgets(prev => prev.map(b => b.id === budgetId ? { ...b, name: editingBudgetName } : b));
+                setEditingBudgetId(null);
+            };
+
+            const handleExpenseInputChange = (budgetId, field, value) => {
+                setExpenseInputs(prev => ({
+                    ...prev,
+                    [budgetId]: { ...prev[budgetId], [field]: value }
+                }));
+            };
+
+            const addExpense = (budgetId) => {
+                const input = expenseInputs[budgetId];
+                if (!input || !input.amount) return;
+
+                const amount = parseInt(input.amount);
+                const desc = input.desc || '지출';
+                const dateStr = getFormattedDateTime();
+
+                const updatedBudgets = budgets.map(budget => {
+                    if (budget.id === budgetId) {
+                        return {
+                            ...budget,
+                            spent: budget.spent + amount,
+                            logs: [{ 
+                                id: Date.now() + Math.random(), 
+                                amount, 
+                                desc, 
+                                date: dateStr 
+                            }, ...budget.logs]
+                        };
+                    }
+                    return budget;
+                });
+
+                setBudgets(updatedBudgets);
+                setExpenseInputs(prev => ({ ...prev, [budgetId]: { amount: '', desc: '' } }));
+            };
+
+            const deleteLog = (budgetId, logId) => {
+                if(!window.confirm('이 지출 내역을 삭제하시겠습니까?')) return;
+                setBudgets(prev => prev.map(budget => {
+                    if(budget.id !== budgetId) return budget;
+                    const logToDelete = budget.logs.find(l => l.id === logId);
+                    return {
+                        ...budget,
+                        spent: budget.spent - (logToDelete ? logToDelete.amount : 0),
+                        logs: budget.logs.filter(l => l.id !== logId)
+                    };
+                }));
+            };
+
+            const openEditLogModal = (budgetId, log) => {
+                setEditingLog({ budgetId, logId: log.id, desc: log.desc, amount: log.amount });
+                setIsEditModalOpen(true);
+            };
+
+            const handleUpdateLog = (e) => {
+                e.preventDefault();
+                if(!editingLog) return;
+                const newAmount = parseInt(editingLog.amount);
+                setBudgets(budgets.map(budget => {
+                    if(budget.id !== editingLog.budgetId) return budget;
+                    const oldLog = budget.logs.find(l => l.id === editingLog.logId);
+                    const amountDiff = newAmount - oldLog.amount;
+                    const newLogs = budget.logs.map(l => {
+                        if(l.id === editingLog.logId) return { ...l, desc: editingLog.desc, amount: newAmount };
+                        return l;
+                    });
+                    return { ...budget, spent: budget.spent + amountDiff, logs: newLogs };
+                }));
+                setIsEditModalOpen(false);
+                setEditingLog(null);
+            };
+
+            // 스타일 상수 (통일성 유지)
+            // 라벨: 기존 '예산 이름' 라벨 스타일과 동일하게 통일
+            const LABEL_CLASS = "block text-xs font-medium text-gray-500 mb-1 ml-1";
+            // 입력창/드롭박스: 회색(gray-50) 배경과 gray-200 테두리, 둥근 모서리, 텍스트 스타일 통일
+            const INPUT_CLASS = "w-full p-3 bg-gray-50 border border-gray-200 rounded-xl text-gray-700 font-medium focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm";
+
+            return (
+                <div className="min-h-screen bg-white text-gray-800 font-sans relative pb-24 pt-16">
+                    {/* 상단 고정 바 */}
+                    <header className="fixed top-0 left-0 right-0 h-16 bg-white/90 backdrop-blur-md z-40 flex items-center justify-between px-4 border-b border-gray-100 shadow-sm">
+                        <button
+                            onClick={() => setIsMenuOpen(true)}
+                            className="bg-gray-100 text-gray-600 w-10 h-10 flex items-center justify-center rounded-full transition-all active:scale-95 hover:bg-gray-200"
+                            title="메뉴"
+                        >
+                            <MenuIcon className="w-6 h-6" />
+                        </button>
+
+                        <h1 className="text-xl font-black text-gray-800 tracking-tight flex items-center gap-1.5 absolute left-1/2 transform -translate-x-1/2">
+                            <WalletIcon className="w-6 h-6 text-blue-600" />
+                            <span>결정적 소비</span>
+                        </h1>
+
+                        <button
+                            onClick={() => setIsCalcOpen(true)}
+                            className="bg-blue-100 text-blue-600 w-9 h-9 rounded-full flex items-center justify-center shadow-sm hover:bg-blue-200 transition-all active:scale-95"
+                            title="계산기"
+                        >
+                            <CalculatorIcon className="w-5 h-5" />
+                        </button>
+                    </header>
+
+                    <div className="max-w-md mx-auto p-4 space-y-5">
+                        <CurrencyConverter 
+                            isVisible={appSettings.showConverter} 
+                            foreignCurrency={appSettings.selectedCurrency}
+                        />
+
+                        {budgets.length === 0 ? (
+                            <div className="text-center py-20 text-gray-400 bg-blue-50 rounded-2xl border border-blue-100 border-dashed animate-fade-in">
+                                <p>좌측 상단 메뉴를 눌러<br/>예산을 추가해보세요.</p>
                             </div>
-                            )}
-                            {compareMode === 'split' && (
-                            <div className="flex flex-col gap-4 p-4">
-                                <div className="flex gap-2 w-full h-[50vh] min-h-[300px]">
-                                {[0, 1].map((idx) => (
-                                    <div key={idx} className="flex-1 bg-white rounded-[2rem] border border-gray-200 overflow-hidden flex flex-col relative shadow-md">
-                                    {splitSelection[idx] ? (
-                                        <>
-                                        <img src={photos[splitSelection[idx]]} className="w-full h-full object-contain bg-gray-50" alt="" />
-                                        <div className="absolute top-3 left-3 bg-indigo-900/80 text-white text-[10px] px-2.5 py-1 rounded-full font-bold backdrop-blur-sm">{splitSelection[idx]}</div>
-                                        <button onClick={() => { const newSel = [...splitSelection]; newSel[idx] = null; setSplitSelection(newSel); }} className="absolute top-3 right-3 bg-white/90 shadow-sm w-7 h-7 flex items-center justify-center rounded-full text-gray-700 font-bold text-xs border border-gray-200">X</button>
-                                        </>
-                                    ) : (
-                                        <div className="flex-1 flex flex-col items-center justify-center text-gray-300 gap-2">
-                                            <div className="w-12 h-12 rounded-full bg-gray-100 flex items-center justify-center text-gray-400">
-                                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-6 h-6">
-                                                    <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 15.75l5.159-5.159a2.25 2.25 0 013.182 0l5.159 5.159m-1.5-1.5l1.409-1.409a2.25 2.25 0 013.182 0l2.909 2.909m-18 3.75h16.5a1.5 1.5 0 001.5-1.5V6a1.5 1.5 0 00-1.5-1.5H3.75A1.5 1.5 0 002.25 6v12a1.5 1.5 0 001.5 1.5zm10.5-11.25h.008v.008h-.008V8.25zm.375 0a.375.375 0 11-.75 0 .375.375 0 01.75 0z" />
-                                                </svg>
+                        ) : (
+                            budgets.map((budget, index) => {
+                                const remaining = budget.total - budget.spent;
+                                const percent = Math.min(100, Math.max(0, (budget.spent / budget.total) * 100));
+                                const isOver = remaining < 0;
+                                
+                                return (
+                                    <div key={budget.id} className="bg-blue-50 rounded-2xl shadow-sm border border-blue-100 p-5 transition-all hover:shadow-md animate-slide-up" style={{animationDelay: `${index * 0.05}s`}}>
+                                        <div className="flex justify-between items-center mb-4 border-b border-blue-100 pb-2">
+                                            <div className="flex-1 mr-2">
+                                                {editingBudgetId === budget.id ? (
+                                                    <div className="flex items-center gap-2">
+                                                        <input 
+                                                            type="text" 
+                                                            value={editingBudgetName}
+                                                            onChange={(e) => setEditingBudgetName(e.target.value)}
+                                                            className="w-full bg-white border border-blue-300 rounded px-2 py-1 text-lg font-bold outline-none"
+                                                            autoFocus
+                                                            onKeyDown={(e) => e.key === 'Enter' && saveBudgetTitle(budget.id)}
+                                                        />
+                                                        <button onClick={() => saveBudgetTitle(budget.id)} className="text-blue-600 bg-blue-100 p-1 rounded hover:bg-blue-200">
+                                                            <CheckIcon className="w-5 h-5" />
+                                                        </button>
+                                                    </div>
+                                                ) : (
+                                                    <div className="flex items-center gap-2 group">
+                                                        <h3 className="text-lg font-bold text-gray-800">
+                                                            {budget.name}
+                                                        </h3>
+                                                        <button 
+                                                            onClick={() => startEditingBudget(budget)} 
+                                                            className="text-gray-400 hover:text-blue-600 opacity-100 sm:opacity-0 group-hover:opacity-100 transition-opacity"
+                                                        >
+                                                            <PencilIcon className="w-4 h-4" />
+                                                        </button>
+                                                    </div>
+                                                )}
                                             </div>
-                                            <span className="text-xs font-bold text-gray-400">사진 선택 {idx + 1}</span>
-                                        </div>
-                                    )}
-                                    </div>
-                                ))}
-                                </div>
-                                <div className="bg-white rounded-[2rem] border border-gray-100 p-5 flex flex-col shadow-md">
-                                <p className="text-sm text-gray-500 mb-4 font-bold px-1">비교할 사진 선택</p>
-                                <div className="grid grid-cols-3 gap-3">
-                                    {sortedPhotoDates.map((date) => {
-                                    const isSelected = splitSelection.includes(date);
-                                    return (
-                                        <button key={date} disabled={isSelected} onClick={() => { const emptyIndex = splitSelection.indexOf(null); if (emptyIndex !== -1) { const newSel = [...splitSelection]; newSel[emptyIndex] = date; setSplitSelection(newSel); } else { setSplitSelection([splitSelection[1], date]); } }} className={`relative aspect-square rounded-2xl overflow-hidden transition-all border bg-gray-50 group ${isSelected ? 'opacity-40 border-indigo-200' : 'border-transparent hover:border-indigo-300 shadow-sm'}`}>
-                                            <img src={photos[date]} alt={date} className="w-full h-full object-cover" />
-                                            {isSelected && (
-                                                <div className="absolute inset-0 flex items-center justify-center bg-indigo-900/30">
-                                                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-8 h-8 text-white">
-                                                        <path fillRule="evenodd" d="M2.25 12c0-5.385 4.365-9.75 9.75-9.75s9.75 4.365 9.75 9.75-4.365 9.75-9.75 9.75S2.25 17.385 2.25 12zm13.36-1.814a.75.75 0 10-1.22-.872l-3.236 4.53L9.53 12.22a.75.75 0 00-1.06 1.06l2.25 2.25a.75.75 0 001.14-.094l3.75-5.25z" clipRule="evenodd" />
-                                                    </svg>
+
+                                            <div className="flex items-center gap-1">
+                                                <div className="flex mr-2 bg-white/50 rounded-lg p-0.5">
+                                                    <button onClick={() => moveBudget(index, -1)} disabled={index === 0} className={`p-1 rounded hover:bg-white hover:shadow-sm ${index === 0 ? 'text-gray-300 cursor-not-allowed' : 'text-gray-500 hover:text-blue-600'}`}>
+                                                        <ArrowUpIcon className="w-4 h-4" />
+                                                    </button>
+                                                    <button onClick={() => moveBudget(index, 1)} disabled={index === budgets.length - 1} className={`p-1 rounded hover:bg-white hover:shadow-sm ${index === budgets.length - 1 ? 'text-gray-300 cursor-not-allowed' : 'text-gray-500 hover:text-blue-600'}`}>
+                                                        <ArrowDownIcon className="w-4 h-4" />
+                                                    </button>
                                                 </div>
-                                            )}
-                                        </button>
-                                    );
-                                    })}
-                                </div>
-                                </div>
-                            </div>
-                            )}
-                        </>
+                                                <button onClick={() => deleteBudget(budget.id)} className="text-gray-400 hover:text-red-500 p-1 rounded hover:bg-red-50">
+                                                    <TrashIcon className="w-4 h-4" />
+                                                </button>
+                                            </div>
+                                        </div>
+
+                                        <div className="mb-1">
+                                            <div className="flex justify-between items-center mb-1">
+                                                <div className="text-left">
+                                                    <p className="text-xs text-gray-500 mb-1">총 예산</p>
+                                                    <p className="text-2xl font-bold text-blue-600">
+                                                        <span>{formatMoney(budget.total)}</span>
+                                                    </p>
+                                                </div>
+                                                <div className="h-8 w-px bg-blue-200 mx-2 opacity-50"></div>
+                                                <div className="text-right">
+                                                    <p className="text-xs text-gray-500 mb-1">남은 돈</p>
+                                                    <p className="text-2xl font-bold text-red-600">
+                                                        <span>{formatMoney(remaining)}</span>
+                                                    </p>
+                                                </div>
+                                            </div>
+                                            <div className="w-full h-2.5 bg-blue-200/50 rounded-full mb-6 overflow-hidden">
+                                                <div 
+                                                    className={`h-full rounded-full transition-all duration-300 ${isOver ? 'bg-red-500' : 'bg-blue-500'}`}
+                                                    style={{ width: `${percent}%` }}
+                                                ></div>
+                                            </div>
+                                        </div>
+
+                                        <div className="flex gap-2 mb-4">
+                                            <input
+                                                type="text"
+                                                placeholder="내용"
+                                                className="flex-1 min-w-0 p-2 text-sm bg-white border border-transparent rounded-lg focus:border-blue-500 outline-none transition-colors shadow-sm"
+                                                value={expenseInputs[budget.id]?.desc || ''}
+                                                onChange={(e) => handleExpenseInputChange(budget.id, 'desc', e.target.value)}
+                                            />
+                                            <input
+                                                type="number"
+                                                inputMode="numeric"
+                                                placeholder="금액"
+                                                className="flex-1 min-w-0 p-2 text-sm bg-white border border-transparent rounded-lg focus:border-blue-500 outline-none transition-colors shadow-sm text-right"
+                                                value={expenseInputs[budget.id]?.amount || ''}
+                                                onChange={(e) => handleExpenseInputChange(budget.id, 'amount', e.target.value)}
+                                                onKeyDown={(e) => e.key === 'Enter' && addExpense(budget.id)}
+                                            />
+                                            <button 
+                                                onClick={() => addExpense(budget.id)}
+                                                className="bg-blue-600 text-white px-3 py-2 rounded-lg text-sm font-bold shrink-0 shadow-sm hover:bg-blue-700"
+                                            >
+                                                입력
+                                            </button>
+                                        </div>
+
+                                        {budget.logs.length > 0 && (
+                                            <div className="bg-white/60 rounded-lg p-3 border border-blue-100/50">
+                                                <ul className="space-y-2">
+                                                    {budget.logs.map((log) => (
+                                                        <li key={log.id} className="flex justify-between items-center text-xs text-gray-600 group">
+                                                            <div className="flex items-center gap-3 overflow-hidden flex-1 mr-2">
+                                                                <span className="text-[10px] text-gray-400 font-medium tabular-nums shrink-0 leading-tight">
+                                                                    {log.date && log.date.includes('/') ? log.date : (log.date || '').substring(5)}
+                                                                </span>
+                                                                <span className="font-medium text-gray-700 truncate">
+                                                                    {log.desc}
+                                                                </span>
+                                                            </div>
+                                                            <div className="flex items-center gap-2 shrink-0">
+                                                                <span className="font-bold">
+                                                                    -{formatMoney(log.amount)}
+                                                                </span>
+                                                                <div className="flex items-center gap-1 opacity-100 sm:opacity-0 group-hover:opacity-100 transition-opacity">
+                                                                    <button onClick={() => openEditLogModal(budget.id, log)} className="p-1 bg-gray-100 rounded hover:bg-blue-100 text-gray-500 hover:text-blue-600">
+                                                                        <PencilIcon className="w-3 h-3" />
+                                                                    </button>
+                                                                    <button onClick={() => deleteLog(budget.id, log.id)} className="p-1 bg-gray-100 rounded hover:bg-red-100 text-gray-500 hover:text-red-600">
+                                                                        <XIcon className="w-3 h-3" />
+                                                                    </button>
+                                                                </div>
+                                                            </div>
+                                                        </li>
+                                                    ))}
+                                                </ul>
+                                            </div>
+                                        )}
+                                    </div>
+                                );
+                            })
                         )}
                     </div>
+
+                    {(isMenuOpen || isCalcOpen || (isEditModalOpen && editingLog)) && (
+                        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-fade-in">
+                            
+                            {isMenuOpen && (
+                                <div className="bg-white rounded-2xl w-full max-w-sm shadow-xl border border-gray-100 animate-slide-up overflow-hidden flex flex-col max-h-[90vh]">
+                                    <div className="bg-blue-50 p-4 flex justify-between items-center border-b border-blue-100 shrink-0">
+                                        <h2 className="text-lg font-bold text-gray-800 flex items-center gap-2">
+                                            <MenuIcon className="w-5 h-5 text-blue-600" />
+                                            메뉴
+                                        </h2>
+                                        <button onClick={() => setIsMenuOpen(false)} className="text-gray-400 hover:text-gray-600">
+                                            <XIcon className="w-6 h-6" />
+                                        </button>
+                                    </div>
+                                    
+                                    <div className="p-6 space-y-8 overflow-y-auto custom-scrollbar">
+                                        <div className="space-y-4">
+                                            <div className="flex items-center justify-between">
+                                                <span className="font-bold text-blue-600 flex items-center gap-2 text-lg">
+                                                    <SimpleCheckIcon className="w-5 h-5 text-blue-600" />
+                                                    환율 계산기 표시
+                                                </span>
+                                                <div className="relative inline-block w-12 align-middle select-none transition duration-200 ease-in">
+                                                    <input type="checkbox" name="toggle" id="toggle" className="toggle-checkbox absolute block w-6 h-6 rounded-full bg-white border-4 appearance-none cursor-pointer border-gray-300" 
+                                                        checked={appSettings.showConverter}
+                                                        onChange={toggleConverter}
+                                                    />
+                                                    <label htmlFor="toggle" className={`toggle-label block overflow-hidden h-6 rounded-full cursor-pointer ${appSettings.showConverter ? 'bg-blue-600' : 'bg-gray-300'}`}></label>
+                                                </div>
+                                            </div>
+
+                                            {appSettings.showConverter && (
+                                                <div className="space-y-3 animate-fade-in">
+                                                    {/* 라벨과 스타일 통일 */}
+                                                    <label className={LABEL_CLASS}>외국 돈 선택</label>
+                                                    <select 
+                                                        value={appSettings.selectedCurrency}
+                                                        onChange={(e) => changeSelectedCurrency(e.target.value)}
+                                                        className={INPUT_CLASS}
+                                                    >
+                                                        {CURRENCIES.map(c => <option key={c.code} value={c.code}>{c.label}</option>)}
+                                                    </select>
+                                                    
+                                                    <button 
+                                                        onClick={() => setIsMenuOpen(false)}
+                                                        className="w-full bg-blue-600 text-white py-3 rounded-xl font-bold text-base hover:bg-blue-700 mt-4 shadow-lg shadow-blue-200"
+                                                    >
+                                                        설정 적용하기
+                                                    </button>
+                                                </div>
+                                            )}
+                                        </div>
+
+                                        <div className="h-px bg-gray-100 w-full"></div>
+
+                                        <div className="space-y-4">
+                                            <span className="font-bold text-blue-600 flex items-center gap-2 text-lg">
+                                                <SimpleCheckIcon className="w-5 h-5 text-blue-600" />
+                                                새 예산 추가
+                                            </span>
+                                            <form onSubmit={handleAddBudget} className="space-y-4">
+                                                <div>
+                                                    <label className={LABEL_CLASS}>예산 이름</label>
+                                                    <input type="text" placeholder="예: 여행 경비" className={INPUT_CLASS} value={newBudgetName} onChange={(e) => setNewBudgetName(e.target.value)} />
+                                                </div>
+                                                <div>
+                                                    <label className={LABEL_CLASS}>총 금액</label>
+                                                    <input type="number" inputMode="numeric" placeholder="0" className={INPUT_CLASS} value={newBudgetAmount} onChange={(e) => setNewBudgetAmount(e.target.value)} />
+                                                    <div className="flex gap-2 mt-2">
+                                                        {[10000, 50000, 100000].map(amt => (
+                                                            <button key={amt} type="button" onClick={() => addAmountToInput(amt)} className="flex-1 py-2 bg-gray-50 text-gray-600 text-xs font-medium rounded-lg hover:bg-gray-100 border border-gray-200">+{amt/10000}만</button>
+                                                        ))}
+                                                    </div>
+                                                </div>
+                                                <button type="submit" className="w-full bg-blue-600 text-white py-3 rounded-xl font-bold text-base hover:bg-blue-700 mt-2 shadow-lg shadow-blue-200">추가하기</button>
+                                            </form>
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
+
+                            {isCalcOpen && (
+                                <div className="bg-white rounded-2xl p-6 w-full max-w-sm shadow-xl border border-gray-100 animate-slide-up">
+                                    <div className="flex justify-between items-center mb-4">
+                                        <h2 className="text-xl font-bold text-gray-800">계산기</h2>
+                                        <button onClick={() => setIsCalcOpen(false)} className="text-gray-400 hover:text-gray-600">
+                                            <XIcon className="w-6 h-6" />
+                                        </button>
+                                    </div>
+                                    <StandardCalculator />
+                                </div>
+                            )}
+
+                            {isEditModalOpen && editingLog && (
+                                <div className="bg-white rounded-2xl p-6 w-full max-w-sm shadow-xl border border-gray-100 animate-slide-up">
+                                    <div className="flex justify-between items-center mb-6">
+                                        <h2 className="text-xl font-bold text-gray-800">지출 내역 수정</h2>
+                                        <button onClick={() => { setIsEditModalOpen(false); setEditingLog(null); }} className="text-gray-400 hover:text-gray-600">
+                                            <XIcon className="w-6 h-6" />
+                                        </button>
+                                    </div>
+                                    <form onSubmit={handleUpdateLog} className="space-y-4">
+                                        <div>
+                                            <label className="block text-sm font-medium text-gray-600 mb-1">내용</label>
+                                            <input type="text" className="w-full p-3 bg-blue-50 border border-blue-100 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500" value={editingLog.desc} onChange={(e) => setEditingLog({...editingLog, desc: e.target.value})} />
+                                        </div>
+                                        <div>
+                                            <label className="block text-sm font-medium text-gray-600 mb-1">금액</label>
+                                            <input type="number" inputMode="numeric" className="w-full p-3 bg-blue-50 border border-blue-100 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500" value={editingLog.amount} onChange={(e) => setEditingLog({...editingLog, amount: e.target.value})} />
+                                        </div>
+                                        <button type="submit" className="w-full bg-blue-600 text-white py-4 rounded-xl font-bold text-lg hover:bg-blue-700 mt-4 shadow-lg shadow-blue-200">수정 완료</button>
+                                    </form>
+                                </div>
+                            )}
+
+                        </div>
                     )}
-                </main>
                 </div>
             );
         }
